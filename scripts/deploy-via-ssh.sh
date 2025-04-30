@@ -79,7 +79,7 @@ install_uuidgen() {
       log_warning "Installing uuidgen on macOS..."
       if ! command -v brew &> /dev/null; then
         log_info "Homebrew is not installed. Installing Homebrew first..."
-        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        /bin/bash -c "$(curl -fsSL https://gh-proxy.com/raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
       fi
       log_info "Installing uuidgen via Homebrew..."
       brew install coreutils
@@ -195,7 +195,7 @@ execute_command() {
   local command="$1"
 
   log_info "Executing command: $command"
-  eval "ssh remote \"$command\"" || { log_error "Error: Failed to execute command."; exit 1; }
+  eval "ssh remote \"$command\" &> /dev/null" || { log_error "Error: Failed to execute command."; exit 1; }
   log_success "Command executed successfully."
 }
 
