@@ -9,7 +9,7 @@ $:
         - name: push tag
           script: docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH}
         - name: build latest
-          script: docker build -f Dockerfile CNB_BRANCH=${CNB_BRANCH} -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest .
+          script: docker build -f Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest .
         - name: push latest
           script: docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest
         
