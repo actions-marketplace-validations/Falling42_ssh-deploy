@@ -1,9 +1,8 @@
 master:
   push:
       stages:
-      - docker:
-        build: Dockerfile
-        dockerImageName: falling42/ssh-deploy
+      - name: build
+        scripts: docker build -f Dockerfile -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE} .
       - name: ssh deploy
         image: falling42/ssh-deploy
         imports: https://cnb.cool/falling42/credentials/-/blob/main/env.yml
