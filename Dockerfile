@@ -21,7 +21,7 @@ RUN apk add --no-cache \
 WORKDIR /app
 
 # 将脚本文件拷贝到镜像中
-COPY ./scripts/deploy-via-ssh.sh /app/deploy-via-ssh.sh
+COPY scripts/deploy-via-ssh.sh /app/deploy-via-ssh.sh
 
 # 给予执行权限
 RUN chmod +x /app/deploy-via-ssh.sh
