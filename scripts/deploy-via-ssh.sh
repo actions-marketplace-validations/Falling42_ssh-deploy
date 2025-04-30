@@ -145,7 +145,6 @@ Host ${host_name}
   StrictHostKeyChecking no
   ServerAliveInterval 60
   ServerAliveCountMax 3
-  UserKnownHostsFile /dev/null
   ${proxy_jump}
 END
   else
@@ -205,7 +204,7 @@ ensure_directory_exists() {
   local remote_dir_path="$1"
   
   log_info "Checking if directory ${remote_dir_path} exists on remote host..."
-  if ! ssh remote "[ -d ${remote_dir_path} ]"; then
+  if ! ssh remote "[ -d ${remote_dir_path} ]" 2>/dev/null; then
     log_warning "Directory ${remote_dir_path} does not exist. Creating it..."
     execute_command "sudo mkdir -p ${remote_dir_path}" || { log_error "Error: Failed to create directory ${remote_dir_path}."; exit 1; }
     log_success "Directory ${remote_dir_path} created successfully."
