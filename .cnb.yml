@@ -8,7 +8,7 @@ master:
         - name: build
           script: docker build -f Dockerfile -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest .
         - name: push
-          script: docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest .
+          script: docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest
         - name: ssh deploy
           image: docker.cnb.cool/falling42/ssh-deploy
           imports: https://cnb.cool/falling42/credentials/-/blob/main/env.yml
