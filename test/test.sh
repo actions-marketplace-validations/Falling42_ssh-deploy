@@ -1,3 +1,3 @@
 #!/bin/bash
-sleep 1000
+sleep 120
 echo "Hello"

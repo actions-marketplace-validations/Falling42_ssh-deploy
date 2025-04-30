@@ -105,7 +105,8 @@ check_param() {
     log_error "Error: $param_name is missing."
     exit 1
   else
-    log_info "$param_name is ${BLUE}$param_value${RESET}."
+    # log_info "$param_name is ${BLUE}$param_value${RESET}."
+    log_info "$param_name has been successfully set."
   fi
 }
 
