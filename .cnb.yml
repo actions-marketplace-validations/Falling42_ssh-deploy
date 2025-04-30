@@ -1,6 +1,6 @@
 master:
   push:
-      stages:
+    - stages:
       - name: build
         scripts: docker build -f Dockerfile -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE} .
       - name: ssh deploy
