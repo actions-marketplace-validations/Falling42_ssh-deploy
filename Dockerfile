@@ -1,6 +1,9 @@
 # 使用 Alpine 作为基础镜像
 FROM alpine:3.21
 
+ARG CNB_BRANCH
+ENV VERSION=${CNB_BRANCH}
+
 # 设置时区为上海
 RUN apk add --no-cache tzdata && \
     cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \

@@ -27,6 +27,7 @@ log_warning() {
 }
 
 # 从环境变量中读取值
+SCRIPT_VERSION="${VERSION}"
 USE_SCREEN="${PLUGIN_USE_SCREEN:-no}"
 USE_JUMP_HOST="${PLUGIN_USE_JUMP_HOST:-no}"
 JUMP_SSH_HOST="${PLUGIN_JUMP_SSH_HOST:-}"
@@ -364,7 +365,7 @@ check_execute_deployment(){
 
 # 主函数
 main(){
-  log_info "Script Version: ${MAGENTA}v0.2.1${RESET}"
+  log_info "Script Version: ${MAGENTA}${SCRIPT_VERSION${RESET}"
   check_required_params
   setup_ssh
   check_transfer_file
