@@ -8,7 +8,7 @@ master:
         - name: build
           script: docker build -f Dockerfile -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE} .
         - name: ssh deploy
-          image: ${CNB_DOCKER_REGISTRY}/falling42/ssh-deploy
+          image: docker.cnb.cool/falling42/ssh-deploy
           imports: https://cnb.cool/falling42/credentials/-/blob/main/env.yml
           settings:
             use_screen: 'yes' # Defaults to no, omit if not needed
