@@ -184,9 +184,9 @@ execute_inscreen() {
   install_uuidgen
   screen_name="$screen_name$(uuidgen)"
   log_info "Creating screen session: $screen_name"
-  eval "ssh remote sudo screen -dmS $screen_name" || { log_error "Error: Failed to create screen session."; exit 1; }
+  eval "ssh remote sudo screen -dmS $screen_name  &> /dev/null" || { log_error "Error: Failed to create screen session."; exit 1; }
   log_info "Executing command in screen: $command"
-  eval "ssh remote sudo screen -S $screen_name -X stuff \"\$'$command && exit\n'\"" || { log_error "Error: Failed to execute command in screen."; exit 1; }
+  eval "ssh remote sudo screen -S $screen_name -X stuff \"\$'$command && exit\n'\"  &> /dev/null" || { log_error "Error: Failed to execute command in screen."; exit 1; }
   log_info "Command is executing in screen. Check the screen session for any errors."
 }
 
@@ -195,7 +195,7 @@ execute_command() {
   local command="$1"
 
   log_info "Executing command: $command"
-  eval "ssh remote \"$command\" &> /dev/null" || { log_error "Error: Failed to execute command."; exit 1; }
+  eval "ssh remote \"$command\" &> /dev/null"  || { log_error "Error: Failed to execute command."; exit 1; }
   log_success "Command executed successfully."
 }
 
@@ -255,7 +255,7 @@ transfer_file() {
 
   if ! "${isdir}"; then
     log_info "Checking if remote file ${destination} exists on remote host..."
-    if ssh remote [ -f ${destination} ]; then
+    if ssh remote [ -f ${destination} ]  &> /dev/null ; then
       log_info "Remote file ${destination} exists. Checking if it is identical to the source file..."
       source_md5=$(md5sum "${source}" | awk '{print $1}')
       remote_md5=$(ssh "remote" "md5sum ${destination}" | awk '{print $1}')
@@ -271,12 +271,12 @@ transfer_file() {
       ensure_directory_exists "${dest_dir}"
     fi
     log_warning "Transferring files from ${source} to remote:${destination}..."
-    scp "${source}" "remote:${destination}" || { log_error "Error: File transfer to remote server failed."; exit 1; }
+    scp "${source}" "remote:${destination}  &> /dev/null" || { log_error "Error: File transfer to remote server failed."; exit 1; }
   else
     log_warning "${source_file} is a directory."
     ensure_directory_exists "${dest_dir}"
     log_warning "Transferring files from ${source} to remote:${destination}..."
-    scp -r "${source}" "remote:${destination}" || { log_error "Error: File transfer to remote server failed."; exit 1; }
+    scp -r "${source}" "remote:${destination}  &> /dev/null" || { log_error "Error: File transfer to remote server failed."; exit 1; }
   fi
   log_success "File: ${source} transfer to remote:${destination} completed successfully."
   set_permissions "${destination}"
