@@ -1,9 +1,9 @@
 master:
   push:
-    - docker:
+      stages:
+      - docker:
         build: Dockerfile
         dockerImageName: falling42/ssh-deploy
-      stages:
       - name: ssh deploy
         image: falling42/ssh-deploy
         imports: https://cnb.cool/falling42/credentials/-/blob/main/env.yml
