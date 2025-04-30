@@ -145,6 +145,7 @@ Host ${host_name}
   StrictHostKeyChecking no
   ServerAliveInterval 60
   ServerAliveCountMax 3
+  UserKnownHostsFile /dev/null
   ${proxy_jump}
 END
   else
