@@ -4,10 +4,15 @@ $:
       # 流水线中启用 docker 服务
       - docker
       stages:
-        - name: build
+        - name: build tag
           script: docker build -f Dockerfile -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH} .
-        - name: push
+        - name: push tag
           script: docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH}
+        - name: build latest
+          script: docker build -f Dockerfile -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest .
+        - name: push latest
+          script: docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest
+        
         # - name: ssh deploy
         #   image: docker.cnb.cool/falling42/ssh-deploy
         #   imports: https://cnb.cool/falling42/credentials/-/blob/main/env.yml
