@@ -8,22 +8,24 @@ BLUE="\033[34m"
 MAGENTA="\033[35m"
 CYAN="\033[36m"
 RESET="\033[0m"
+GRAY="\033[90m"
 
 # 输出带颜色的信息
+
 log_info() {
-  echo -e "${CYAN}$1${RESET}"
+  echo -e "${GRAY}[$(date '+%F %T')]${RESET} ${CYAN}$1${RESET}"
 }
 
 log_success() {
-  echo -e "${GREEN}$1${RESET}"
-}
-
-log_error() {
-  echo -e "${RED}$1${RESET}"
+  echo -e "${GRAY}[$(date '+%F %T')]${RESET} ${GREEN}$1${RESET}"
 }
 
 log_warning() {
-  echo -e "${YELLOW}$1${RESET}"
+  echo -e "${GRAY}[$(date '+%F %T')]${RESET} ${YELLOW}$1${RESET}"
+}
+
+log_error() {
+  echo -e "${GRAY}[$(date '+%F %T')]${RESET} ${RED}$1${RESET}"
 }
 
 # 从环境变量中读取值
@@ -47,55 +49,6 @@ SOURCE_FILE_PATH="${PLUGIN_SOURCE_FILE_PATH:-}"
 DESTINATION_PATH="${PLUGIN_DESTINATION_PATH:-}"
 SERVICE_NAME="${PLUGIN_SERVICE_NAME:-}"
 SERVICE_VERSION="${PLUGIN_SERVICE_VERSION:-}"
-
-# 检测系统并安装 uuidgen
-install_uuidgen() {
-  if command -v uuidgen &> /dev/null; then
-    log_success "uuidgen is already installed on this server."
-    return 0  # 退出安装函数，表示已安装
-  fi
-  log_warning "uuidgen is not installed on this server. Installing..."
-  if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    if command -v apt-get &> /dev/null; then
-      log_info "Detected Debian/Ubuntu. Installing uuidgen..."
-      sudo apt-get update
-      sudo apt-get install -y uuid-runtime
-    elif command -v yum &> /dev/null; then
-      log_info "Detected CentOS/RedHat/Fedora. Installing uuidgen..."
-      sudo yum install -y util-linux
-    elif command -v dnf &> /dev/null; then
-      log_info "Detected Fedora (dnf). Installing uuidgen..."
-      sudo dnf install -y util-linux
-    elif command -v pacman &> /dev/null; then
-      log_info "Detected Arch Linux. Installing uuidgen..."
-      sudo pacman -S util-linux
-    else
-      log_error "Unsupported Linux distribution. Please install uuidgen manually."
-      exit 1
-    fi
-  elif [[ "$OSTYPE" == "darwin"* ]]; then
-    if command -v uuidgen &> /dev/null; then
-      log_success "uuidgen is already installed on macOS."
-    else
-      log_warning "Installing uuidgen on macOS..."
-      if ! command -v brew &> /dev/null; then
-        log_info "Homebrew is not installed. Installing Homebrew first..."
-        /bin/bash -c "$(curl -fsSL https://gh-proxy.com/raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-      fi
-      log_info "Installing uuidgen via Homebrew..."
-      brew install coreutils
-    fi
-  else
-    log_error "Unsupported OS. Please install uuidgen manually."
-    exit 1
-  fi
-  if command -v uuidgen &> /dev/null; then
-    log_success "uuidgen installation successful."
-  else
-    log_error "uuidgen installation failed."
-    exit 1
-  fi
-}
 
 # 检查必需参数是否为空
 check_param() {
@@ -153,14 +106,40 @@ END
   fi
 }
 
-# 检查并安装 screen
+# 检查 SSH 是否能成功连接远程主机，最多重试3次
+check_ssh_connection() {
+  local max_retries=3
+  local retry_delay=3
+  local attempt=1
+
+  log_info "Checking SSH connectivity to remote host..."
+
+  while (( attempt <= max_retries )); do
+    if ssh -q -o ConnectTimeout=10 remote "echo -e '${GREEN}SSH connection successful.${RESET}'" 2>/dev/null; then
+      log_success "SSH connection to remote host succeeded."
+      return 0
+    else
+      log_warning "Attempt ${attempt}/${max_retries}: SSH connection failed."
+      if (( attempt < max_retries )); then
+        log_info "Retrying in ${retry_delay} seconds..."
+        sleep "$retry_delay"
+      fi
+      ((attempt++))
+    fi
+  done
+
+  log_error "Error: SSH connection failed after ${max_retries} attempts. Please check network, SSH key, host, and user configuration."
+  exit 1
+}
+
+# TODO 检查并安装 screen
 check_and_install_screen() {
   log_info "Checking if 'screen' is installed on the remote host..."
-  if ssh remote "command -v screen &>/dev/null"; then
+  if ssh -q remote "command -v screen &>/dev/null"; then
     log_success "'screen' is already installed on the remote host."
   else
     log_warning "'screen' is not installed. Attempting to install..."
-    ssh remote "if command -v apt-get &>/dev/null; then
+    ssh -q remote "if command -v apt-get &>/dev/null; then
                    sudo apt-get update && sudo apt-get install -y screen;
                  elif command -v yum &>/dev/null; then
                    sudo yum install -y screen;
@@ -182,12 +161,11 @@ execute_inscreen() {
   local screen_name="${2:-}"
 
   check_and_install_screen
-  install_uuidgen
-  screen_name="$screen_name$(uuidgen)"
+  screen_name="$screen_name-$(uuidgen)"
   log_info "Creating screen session: $screen_name"
-  eval "ssh remote sudo screen -dmS $screen_name" || { log_error "Error: Failed to create screen session."; exit 1; }
+  eval "ssh -q remote sudo screen -dmS $screen_name" || { log_error "Error: Failed to create screen session."; exit 1; }
   log_info "Executing command in screen: $command"
-  eval "ssh remote sudo screen -S $screen_name -X stuff \"\$'$command && exit\n'\"" || { log_error "Error: Failed to execute command in screen."; exit 1; }
+  eval "ssh -q remote sudo screen -S $screen_name -X stuff \"\$'$command && exit\n'\"" || { log_error "Error: Failed to execute command in screen."; exit 1; }
   log_info "Command is executing in screen. Check the screen session for any errors."
 }
 
@@ -196,7 +174,7 @@ execute_command() {
   local command="$1"
 
   log_info "Executing command: $command"
-  eval "ssh remote \"$command\"" || { log_error "Error: Failed to execute command."; exit 1; }
+  eval "ssh -q remote \"$command\"" || { log_error "Error: Failed to execute command."; exit 1; }
   log_success "Command executed successfully."
 }
 
@@ -205,7 +183,7 @@ ensure_directory_exists() {
   local remote_dir_path="$1"
   
   log_info "Checking if directory ${remote_dir_path} exists on remote host..."
-  if ! ssh remote "[ -d ${remote_dir_path} ]" 2>/dev/null; then
+  if ! ssh -q remote "[ -d ${remote_dir_path} ]" 2>/dev/null; then
     log_warning "Directory ${remote_dir_path} does not exist. Creating it..."
     execute_command "sudo mkdir -p ${remote_dir_path}" || { log_error "Error: Failed to create directory ${remote_dir_path}."; exit 1; }
     log_success "Directory ${remote_dir_path} created successfully."
@@ -220,7 +198,7 @@ set_permissions() {
   local permissions="${2:-755}"
   
   log_info "Checking current permissions for ${remote_file_path} on remote host..."
-  current_permissions="$(ssh remote "stat -c '%a' ${remote_file_path}")"
+  current_permissions="$(ssh -q remote "stat -c '%a' ${remote_file_path}")"
   if [ "$current_permissions" == "$permissions" ]; then
     log_success "Current permissions for ${remote_file_path} are already set to ${permissions}. No need to change."
     return 0
@@ -256,10 +234,10 @@ transfer_file() {
 
   if ! "${isdir}"; then
     log_info "Checking if remote file ${destination} exists on remote host..."
-    if ssh remote [ -f ${destination} ]; then
+    if ssh -q remote [ -f ${destination} ] ; then
       log_info "Remote file ${destination} exists. Checking if it is identical to the source file..."
       source_md5=$(md5sum "${source}" | awk '{print $1}')
-      remote_md5=$(ssh "remote" "md5sum ${destination}" | awk '{print $1}')
+      remote_md5=$(ssh -q "remote" "md5sum ${destination}" | awk '{print $1}')
       if [ "$source_md5" == "$remote_md5" ]; then
         log_success "Source file and remote file are identical. No need to transfer."
         set_permissions "${destination}"
@@ -272,12 +250,12 @@ transfer_file() {
       ensure_directory_exists "${dest_dir}"
     fi
     log_warning "Transferring files from ${source} to remote:${destination}..."
-    scp "${source}" "remote:${destination}" || { log_error "Error: File transfer to remote server failed."; exit 1; }
+    scp -q "${source}" "remote:${destination}" || { log_error "Error: File transfer to remote server failed."; exit 1; }
   else
     log_warning "${source_file} is a directory."
     ensure_directory_exists "${dest_dir}"
     log_warning "Transferring files from ${source} to remote:${destination}..."
-    scp -r "${source}" "remote:${destination}" || { log_error "Error: File transfer to remote server failed."; exit 1; }
+    scp -q -r "${source}" "remote:${destination}" || { log_error "Error: File transfer to remote server failed."; exit 1; }
   fi
   log_success "File: ${source} transfer to remote:${destination} completed successfully."
   set_permissions "${destination}"
@@ -288,7 +266,7 @@ execute_deployment() {
   local deploy_script="$1"
   local service_name="$2"
   local service_version="$3"
-  local screen_name="${service_name}${service_version}"
+  local screen_name="${service_name}-${service_version}"
   local command="sudo ${deploy_script} ${service_name} ${service_version}"
 
   if [ "$USE_SCREEN" == "yes" ]; then
@@ -349,7 +327,7 @@ check_execute_deployment(){
       check_param "$SOURCE_SCRIPT" "Source script"
       transfer_file "$SOURCE_SCRIPT" "$DEPLOY_SCRIPT"
     else
-      if ssh remote [ -f ${DEPLOY_SCRIPT} ]; then
+      if ssh -q remote [ -f ${DEPLOY_SCRIPT} ]; then
         log_info "Remote script ${DEPLOY_SCRIPT} exists."
         set_permissions "$DEPLOY_SCRIPT" 
       else
@@ -368,6 +346,7 @@ main(){
   log_info "Script Version: ${MAGENTA}${SCRIPT_VERSION}${RESET}"
   check_required_params
   setup_ssh
+  check_ssh_connection
   check_transfer_file
   check_execute_deployment
 }
