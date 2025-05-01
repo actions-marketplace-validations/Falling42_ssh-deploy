@@ -8,24 +8,25 @@ BLUE="\033[34m"
 MAGENTA="\033[35m"
 CYAN="\033[36m"
 RESET="\033[0m"
+GRAY="\033[90m"
 
 # 输出带颜色的信息
+
 log_info() {
-  echo -e "[\033[90m$(date '+%F %T')\033[0m] ${CYAN}$1${RESET}"
+  echo -e "${GRAY}[$(date '+%F %T')]${RESET} ${CYAN}$1${RESET}"
 }
 
 log_success() {
-  echo -e "[\033[90m$(date '+%F %T')\033[0m] ${GREEN}$1${RESET}"
-}
-
-log_error() {
-  echo -e "[\033[90m$(date '+%F %T')\033[0m] ${RED}$1${RESET}"
+  echo -e "${GRAY}[$(date '+%F %T')]${RESET} ${GREEN}$1${RESET}"
 }
 
 log_warning() {
-  echo -e "[\033[90m$(date '+%F %T')\033[0m] ${YELLOW}$1${RESET}"
+  echo -e "${GRAY}[$(date '+%F %T')]${RESET} ${YELLOW}$1${RESET}"
 }
 
+log_error() {
+  echo -e "${GRAY}[$(date '+%F %T')]${RESET} ${RED}$1${RESET}"
+}
 
 # 从环境变量中读取值
 SCRIPT_VERSION="${VERSION}"
