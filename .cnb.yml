@@ -1,7 +1,6 @@
 $:
   tag_push:
     - services:
-      # 流水线中启用 docker 服务
       - docker
       stages:
         - name: build tag
@@ -22,7 +21,6 @@ dev:
   push:
     test-deploy:
       services:
-        # 流水线中启用 docker 服务
         - docker
       stages:
         - name: build
@@ -39,7 +37,8 @@ dev:
             # jump_ssh_user: ${{ secrets.JUMP_SSH_USER }}
             # jump_ssh_private_key: ${{ secrets.JUMP_SSH_PRIVATE_KEY }}
             # jump_ssh_port: ${{ secrets.JUMP_SSH_PORT }} # Default is 22, omit if not needed
-            ssh_host: ${test_host}
+            # ssh_host: ${test_host}
+            ssh_host: 1.1.1.1
             ssh_user: ${ssh_user}
             ssh_private_key: ${ssh_private_key}
             # ssh_port: ${{ secrets.SSH_PORT }} # Default is 22, omit if not needed
