@@ -159,7 +159,7 @@ execute_inscreen() {
   local screen_name="${2:-}"
 
   check_and_install_screen
-  screen_name="$screen_name$(uuidgen)"
+  screen_name="$screen_name-$(uuidgen)"
   log_info "Creating screen session: $screen_name"
   eval "ssh -q remote sudo screen -dmS $screen_name" || { log_error "Error: Failed to create screen session."; exit 1; }
   log_info "Executing command in screen: $command"
@@ -264,7 +264,7 @@ execute_deployment() {
   local deploy_script="$1"
   local service_name="$2"
   local service_version="$3"
-  local screen_name="${service_name}${service_version}"
+  local screen_name="${service_name}-${service_version}"
   local command="sudo ${deploy_script} ${service_name} ${service_version}"
 
   if [ "$USE_SCREEN" == "yes" ]; then
