@@ -21,28 +21,29 @@ $:
 dev:
   push:
     test-deploy:
-      - name: build
-        <<: *build_dev
-      - name: ssh deploy
-        image: ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH}
-        imports: https://cnb.cool/falling42/credentials/-/blob/main/env.yml
-        settings:
-          use_screen: 'yes' # Defaults to no, omit if not needed
-          use_jump_host: 'no' # Defaults to no, omit if not needed
-          # jump_ssh_host: ${{ secrets.JUMP_SSH_HOST }}
-          # jump_ssh_user: ${{ secrets.JUMP_SSH_USER }}
-          # jump_ssh_private_key: ${{ secrets.JUMP_SSH_PRIVATE_KEY }}
-          # jump_ssh_port: ${{ secrets.JUMP_SSH_PORT }} # Default is 22, omit if not needed
-          ssh_host: ${test_host}
-          ssh_user: ${ssh_user}
-          ssh_private_key: ${ssh_private_key}
-          # ssh_port: ${{ secrets.SSH_PORT }} # Default is 22, omit if not needed
-          transfer_files: 'yes' # Defaults to yes, as transferring files is a core function of this action :)
-          source_file_path: 'test' # Artifact from an upstream job
-          destination_path: '/data/test/app/' # Ensure the remote server has this directory
-          execute_remote_script: 'yes' # Enable this for the following parameters to take effect
-          copy_script: 'yes' # If disabled, the deploy_script must already exist on the remote server
-          source_script: 'test/test.sh' # Ensure this file exists in your repository
-          deploy_script: '/data/test/scripts/test-deploy.sh' # This file will be overwritten each time if copy_script is enabled
-          service_name: 'falling42-test' # Can be hardcoded or use an upstream variable
-          service_version: ${CNB_COMMIT_SHORT} # Populate from upstream variable if needed by your deploy script
+      stages:
+        - name: build
+          <<: *build_dev
+        - name: ssh deploy
+          image: ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH}
+          imports: https://cnb.cool/falling42/credentials/-/blob/main/env.yml
+          settings:
+            use_screen: 'yes' # Defaults to no, omit if not needed
+            use_jump_host: 'no' # Defaults to no, omit if not needed
+            # jump_ssh_host: ${{ secrets.JUMP_SSH_HOST }}
+            # jump_ssh_user: ${{ secrets.JUMP_SSH_USER }}
+            # jump_ssh_private_key: ${{ secrets.JUMP_SSH_PRIVATE_KEY }}
+            # jump_ssh_port: ${{ secrets.JUMP_SSH_PORT }} # Default is 22, omit if not needed
+            ssh_host: ${test_host}
+            ssh_user: ${ssh_user}
+            ssh_private_key: ${ssh_private_key}
+            # ssh_port: ${{ secrets.SSH_PORT }} # Default is 22, omit if not needed
+            transfer_files: 'yes' # Defaults to yes, as transferring files is a core function of this action :)
+            source_file_path: 'test' # Artifact from an upstream job
+            destination_path: '/data/test/app/' # Ensure the remote server has this directory
+            execute_remote_script: 'yes' # Enable this for the following parameters to take effect
+            copy_script: 'yes' # If disabled, the deploy_script must already exist on the remote server
+            source_script: 'test/test.sh' # Ensure this file exists in your repository
+            deploy_script: '/data/test/scripts/test-deploy.sh' # This file will be overwritten each time if copy_script is enabled
+            service_name: 'falling42-test' # Can be hardcoded or use an upstream variable
+            service_version: ${CNB_COMMIT_SHORT} # Populate from upstream variable if needed by your deploy script
