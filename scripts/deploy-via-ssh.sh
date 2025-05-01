@@ -160,28 +160,28 @@ END
 #   echo "$output" | grep -v "Permanently added"
 #   return $status
 # }
-safe_ssh() {
-  local output status
+# safe_ssh() {
+#   local output status
 
-  output=$(ssh  -o ConnectTimeout=30 -o ConnectionAttempts=1 "$@" 2>&1)
-  status=$?
+#   output=$(ssh  -o ConnectTimeout=30 -o ConnectionAttempts=1 "$@" 2>&1)
+#   status=$?
 
-  while IFS= read -r line; do
-    # 去掉首尾空白再判断是否空行
-    trimmed=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-    if [[ -n "$trimmed" && "$trimmed" != *"Permanently added"* ]]; then
-      log_info "$trimmed"
-    fi
-  done <<< "$output"
+#   while IFS= read -r line; do
+#     # 去掉首尾空白再判断是否空行
+#     trimmed=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+#     if [[ -n "$trimmed" && "$trimmed" != *"Permanently added"* ]]; then
+#       log_info "$trimmed"
+#     fi
+#   done <<< "$output"
 
-  return $status
-}
+#   return $status
+# }
 
 
 # 检查并安装 screen
 check_and_install_screen() {
   log_info "Checking if 'screen' is installed on the remote host..."
-  if safe_ssh remote "command -v screen &>/dev/null"; then
+  if ssh -q remote "command -v screen &>/dev/null"; then
     log_success "'screen' is already installed on the remote host."
   else
     log_warning "'screen' is not installed. Attempting to install..."
@@ -210,9 +210,9 @@ execute_inscreen() {
   install_uuidgen
   screen_name="$screen_name$(uuidgen)"
   log_info "Creating screen session: $screen_name"
-  eval "safe_ssh remote sudo screen -dmS $screen_name" || { log_error "Error: Failed to create screen session."; exit 1; }
+  eval "ssh -q remote sudo screen -dmS $screen_name" || { log_error "Error: Failed to create screen session."; exit 1; }
   log_info "Executing command in screen: $command"
-  eval "safe_ssh remote sudo screen -S $screen_name -X stuff \"\$'$command && exit\n'\"" || { log_error "Error: Failed to execute command in screen."; exit 1; }
+  eval "ssh -q remote sudo screen -S $screen_name -X stuff \"\$'$command && exit\n'\"" || { log_error "Error: Failed to execute command in screen."; exit 1; }
   log_info "Command is executing in screen. Check the screen session for any errors."
 }
 
@@ -221,7 +221,7 @@ execute_command() {
   local command="$1"
 
   log_info "Executing command: $command"
-  eval "safe_ssh remote \"$command\"" || { log_error "Error: Failed to execute command."; exit 1; }
+  eval "ssh -q remote \"$command\"" || { log_error "Error: Failed to execute command."; exit 1; }
   log_success "Command executed successfully."
 }
 
@@ -230,7 +230,7 @@ ensure_directory_exists() {
   local remote_dir_path="$1"
   
   log_info "Checking if directory ${remote_dir_path} exists on remote host..."
-  if ! safe_ssh remote "[ -d ${remote_dir_path} ]" 2>/dev/null; then
+  if ! ssh -q remote "[ -d ${remote_dir_path} ]" 2>/dev/null; then
     log_warning "Directory ${remote_dir_path} does not exist. Creating it..."
     execute_command "sudo mkdir -p ${remote_dir_path}" || { log_error "Error: Failed to create directory ${remote_dir_path}."; exit 1; }
     log_success "Directory ${remote_dir_path} created successfully."
@@ -245,7 +245,7 @@ set_permissions() {
   local permissions="${2:-755}"
   
   log_info "Checking current permissions for ${remote_file_path} on remote host..."
-  current_permissions="$(safe_ssh remote "stat -c '%a' ${remote_file_path}")"
+  current_permissions="$(ssh -q remote "stat -c '%a' ${remote_file_path}")"
   if [ "$current_permissions" == "$permissions" ]; then
     log_success "Current permissions for ${remote_file_path} are already set to ${permissions}. No need to change."
     return 0
@@ -281,10 +281,10 @@ transfer_file() {
 
   if ! "${isdir}"; then
     log_info "Checking if remote file ${destination} exists on remote host..."
-    if safe_ssh remote [ -f ${destination} ] ; then
+    if ssh -q remote [ -f ${destination} ] ; then
       log_info "Remote file ${destination} exists. Checking if it is identical to the source file..."
       source_md5=$(md5sum "${source}" | awk '{print $1}')
-      remote_md5=$(safe_ssh "remote" "md5sum ${destination}" | awk '{print $1}')
+      remote_md5=$(ssh -q "remote" "md5sum ${destination}" | awk '{print $1}')
       if [ "$source_md5" == "$remote_md5" ]; then
         log_success "Source file and remote file are identical. No need to transfer."
         set_permissions "${destination}"
@@ -374,7 +374,7 @@ check_execute_deployment(){
       check_param "$SOURCE_SCRIPT" "Source script"
       transfer_file "$SOURCE_SCRIPT" "$DEPLOY_SCRIPT"
     else
-      if safe_ssh remote [ -f ${DEPLOY_SCRIPT} ]; then
+      if ssh -q remote [ -f ${DEPLOY_SCRIPT} ]; then
         log_info "Remote script ${DEPLOY_SCRIPT} exists."
         set_permissions "$DEPLOY_SCRIPT" 
       else
