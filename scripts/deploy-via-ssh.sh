@@ -153,6 +153,32 @@ END
   fi
 }
 
+# 检查 SSH 是否能成功连接远程主机，最多重试3次
+check_ssh_connection() {
+  local max_retries=3
+  local retry_delay=3
+  local attempt=1
+
+  log_info "Checking SSH connectivity to remote host..."
+
+  while (( attempt <= max_retries )); do
+    if ssh -q -o ConnectTimeout=10 remote "echo 'SSH connection successful.'" 2>/dev/null; then
+      log_success "SSH connection to remote host succeeded."
+      return 0
+    else
+      log_warning "Attempt ${attempt}/${max_retries}: SSH connection failed."
+      if (( attempt < max_retries )); then
+        log_info "Retrying in ${retry_delay} seconds..."
+        sleep "$retry_delay"
+      fi
+      ((attempt++))
+    fi
+  done
+
+  log_error "Error: SSH connection failed after ${max_retries} attempts. Please check network, SSH key, host, and user configuration."
+  exit 1
+}
+
 # safe_ssh() {
 #   local output
 #   output=$(ssh "$@" 2>&1)
@@ -393,6 +419,7 @@ main(){
   log_info "Script Version: ${MAGENTA}${SCRIPT_VERSION}${RESET}"
   check_required_params
   setup_ssh
+  check_ssh_connection
   check_transfer_file
   check_execute_deployment
 }
