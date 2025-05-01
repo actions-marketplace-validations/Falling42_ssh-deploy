@@ -323,12 +323,12 @@ transfer_file() {
       ensure_directory_exists "${dest_dir}"
     fi
     log_warning "Transferring files from ${source} to remote:${destination}..."
-    scp "${source}" "remote:${destination}" || { log_error "Error: File transfer to remote server failed."; exit 1; }
+    scp -q "${source}" "remote:${destination}" || { log_error "Error: File transfer to remote server failed."; exit 1; }
   else
     log_warning "${source_file} is a directory."
     ensure_directory_exists "${dest_dir}"
     log_warning "Transferring files from ${source} to remote:${destination}..."
-    scp -r "${source}" "remote:${destination}" || { log_error "Error: File transfer to remote server failed."; exit 1; }
+    scp -q -r "${source}" "remote:${destination}" || { log_error "Error: File transfer to remote server failed."; exit 1; }
   fi
   log_success "File: ${source} transfer to remote:${destination} completed successfully."
   set_permissions "${destination}"
