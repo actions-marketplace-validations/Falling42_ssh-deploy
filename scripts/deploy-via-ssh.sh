@@ -153,11 +153,25 @@ END
   fi
 }
 
+# safe_ssh() {
+#   local output
+#   output=$(ssh "$@" 2>&1)
+#   local status=$?
+#   echo "$output" | grep -v "Permanently added"
+#   return $status
+# }
 safe_ssh() {
-  local output
-  output=$(ssh "$@" 2>&1)
-  local status=$?
-  echo "$output" | grep -v "Permanently added"
+  local output status
+
+  output=$(ssh  -o ConnectTimeout=5 -o ConnectionAttempts=1 "$@" 2>&1)
+  status=$?
+
+  while IFS= read -r line; do
+    if [[ -n "$line" && "$line" != *"Permanently added"* ]]; then
+      log_error "$line"
+    fi
+  done <<< "$output"
+
   return $status
 }
 
