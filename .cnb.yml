@@ -25,7 +25,7 @@ dev:
       stages:
         - name: build
           ifModify: 
-            - ./scripts/deploy-via-ssh.sh
+            - ./scripts/entrypoint.sh
           <<: *build_dev
         - name: ssh deploy
           image: docker.cnb.cool/falling42/ssh-deploy:dev

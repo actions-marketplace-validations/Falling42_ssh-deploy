@@ -4,30 +4,21 @@ FROM alpine:3.21
 ARG CNB_BRANCH
 ENV VERSION=${CNB_BRANCH}
 
-# 设置时区为上海
-RUN apk add --no-cache tzdata && \
+# 一次性安装全部依赖、设置时区、复制文件、赋权限
+RUN apk add --no-cache \
+      bash \
+      curl \
+      openssh-client \
+      util-linux \
+      screen \
+      git \
+      tzdata && \
     cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
     echo "Asia/Shanghai" > /etc/timezone && \
-    apk del tzdata
+    rm -rf /var/cache/apk/*
 
-# 安装需要的软件包
-RUN apk add --no-cache \
-    bash \
-    curl \
-    openssh-client \
-    uuidgen \
-    screen \
-    sudo \
-    git
+# 拷贝并赋予执行权限
+COPY scripts/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# 设置工作目录
-WORKDIR /app
-
-# 将脚本文件拷贝到镜像中
-COPY scripts/deploy-via-ssh.sh /app/deploy-via-ssh.sh
-
-# 给予执行权限
-RUN chmod +x /app/deploy-via-ssh.sh
-
-# 设置默认的入口命令
-ENTRYPOINT ["/app/deploy-via-ssh.sh"]
+ENTRYPOINT ["/entrypoint.sh"]
