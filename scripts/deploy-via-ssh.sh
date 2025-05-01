@@ -48,55 +48,6 @@ DESTINATION_PATH="${PLUGIN_DESTINATION_PATH:-}"
 SERVICE_NAME="${PLUGIN_SERVICE_NAME:-}"
 SERVICE_VERSION="${PLUGIN_SERVICE_VERSION:-}"
 
-# 检测系统并安装 uuidgen
-install_uuidgen() {
-  if command -v uuidgen &> /dev/null; then
-    log_success "uuidgen is already installed on this server."
-    return 0  # 退出安装函数，表示已安装
-  fi
-  log_warning "uuidgen is not installed on this server. Installing..."
-  if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    if command -v apt-get &> /dev/null; then
-      log_info "Detected Debian/Ubuntu. Installing uuidgen..."
-      sudo apt-get update
-      sudo apt-get install -y uuid-runtime
-    elif command -v yum &> /dev/null; then
-      log_info "Detected CentOS/RedHat/Fedora. Installing uuidgen..."
-      sudo yum install -y util-linux
-    elif command -v dnf &> /dev/null; then
-      log_info "Detected Fedora (dnf). Installing uuidgen..."
-      sudo dnf install -y util-linux
-    elif command -v pacman &> /dev/null; then
-      log_info "Detected Arch Linux. Installing uuidgen..."
-      sudo pacman -S util-linux
-    else
-      log_error "Unsupported Linux distribution. Please install uuidgen manually."
-      exit 1
-    fi
-  elif [[ "$OSTYPE" == "darwin"* ]]; then
-    if command -v uuidgen &> /dev/null; then
-      log_success "uuidgen is already installed on macOS."
-    else
-      log_warning "Installing uuidgen on macOS..."
-      if ! command -v brew &> /dev/null; then
-        log_info "Homebrew is not installed. Installing Homebrew first..."
-        /bin/bash -c "$(curl -fsSL https://gh-proxy.com/raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-      fi
-      log_info "Installing uuidgen via Homebrew..."
-      brew install coreutils
-    fi
-  else
-    log_error "Unsupported OS. Please install uuidgen manually."
-    exit 1
-  fi
-  if command -v uuidgen &> /dev/null; then
-    log_success "uuidgen installation successful."
-  else
-    log_error "uuidgen installation failed."
-    exit 1
-  fi
-}
-
 # 检查必需参数是否为空
 check_param() {
   local param_value=$1
@@ -162,7 +113,7 @@ check_ssh_connection() {
   log_info "Checking SSH connectivity to remote host..."
 
   while (( attempt <= max_retries )); do
-    if ssh -q -o ConnectTimeout=10 remote "echo 'SSH connection successful.'" 2>/dev/null; then
+    if ssh -q -o ConnectTimeout=10 remote "echo -e '${GREEN}SSH connection successful.${RESET}'" 2>/dev/null; then
       log_success "SSH connection to remote host succeeded."
       return 0
     else
@@ -179,39 +130,14 @@ check_ssh_connection() {
   exit 1
 }
 
-# safe_ssh() {
-#   local output
-#   output=$(ssh "$@" 2>&1)
-#   local status=$?
-#   echo "$output" | grep -v "Permanently added"
-#   return $status
-# }
-# safe_ssh() {
-#   local output status
-
-#   output=$(ssh  -o ConnectTimeout=30 -o ConnectionAttempts=1 "$@" 2>&1)
-#   status=$?
-
-#   while IFS= read -r line; do
-#     # 去掉首尾空白再判断是否空行
-#     trimmed=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-#     if [[ -n "$trimmed" && "$trimmed" != *"Permanently added"* ]]; then
-#       log_info "$trimmed"
-#     fi
-#   done <<< "$output"
-
-#   return $status
-# }
-
-
-# 检查并安装 screen
+# TODO 检查并安装 screen
 check_and_install_screen() {
   log_info "Checking if 'screen' is installed on the remote host..."
   if ssh -q remote "command -v screen &>/dev/null"; then
     log_success "'screen' is already installed on the remote host."
   else
     log_warning "'screen' is not installed. Attempting to install..."
-    ssh remote "if command -v apt-get &>/dev/null; then
+    ssh -q remote "if command -v apt-get &>/dev/null; then
                    sudo apt-get update && sudo apt-get install -y screen;
                  elif command -v yum &>/dev/null; then
                    sudo yum install -y screen;
@@ -233,7 +159,6 @@ execute_inscreen() {
   local screen_name="${2:-}"
 
   check_and_install_screen
-  install_uuidgen
   screen_name="$screen_name$(uuidgen)"
   log_info "Creating screen session: $screen_name"
   eval "ssh -q remote sudo screen -dmS $screen_name" || { log_error "Error: Failed to create screen session."; exit 1; }
