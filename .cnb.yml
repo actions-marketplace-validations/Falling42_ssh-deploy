@@ -21,6 +21,9 @@ $:
 dev:
   push:
     test-deploy:
+      services:
+        # 流水线中启用 docker 服务
+        - docker
       stages:
         - name: build
           <<: *build_dev
