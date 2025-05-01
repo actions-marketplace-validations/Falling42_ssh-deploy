@@ -163,12 +163,14 @@ END
 safe_ssh() {
   local output status
 
-  output=$(ssh  -o ConnectTimeout=5 -o ConnectionAttempts=1 "$@" 2>&1)
+  output=$(ssh  -o ConnectTimeout=30 -o ConnectionAttempts=1 "$@" 2>&1)
   status=$?
 
   while IFS= read -r line; do
-    if [[ -n "$line" && "$line" != *"Permanently added"* ]]; then
-      log_error "$line"
+    # 去掉首尾空白再判断是否空行
+    trimmed=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    if [[ -n "$trimmed" && "$trimmed" != *"Permanently added"* ]]; then
+      log_info "$trimmed"
     fi
   done <<< "$output"
 
