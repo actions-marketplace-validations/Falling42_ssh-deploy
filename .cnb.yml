@@ -26,9 +26,11 @@ dev:
         - docker
       stages:
         - name: build
+          ifModify: 
+            - ./scripts/deploy-via-ssh.sh
           <<: *build_dev
         - name: ssh deploy
-          image: ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH}
+          image: docker.cnb.cool/falling42/ssh-deploy:dev
           imports: https://cnb.cool/falling42/credentials/-/blob/main/env.yml
           settings:
             use_screen: 'yes' # Defaults to no, omit if not needed
