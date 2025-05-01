@@ -11,20 +11,21 @@ RESET="\033[0m"
 
 # 输出带颜色的信息
 log_info() {
-  echo -e "${CYAN}$1${RESET}"
+  echo -e "[\033[90m$(date '+%F %T')\033[0m] ${CYAN}$1${RESET}"
 }
 
 log_success() {
-  echo -e "${GREEN}$1${RESET}"
+  echo -e "[\033[90m$(date '+%F %T')\033[0m] ${GREEN}$1${RESET}"
 }
 
 log_error() {
-  echo -e "${RED}$1${RESET}"
+  echo -e "[\033[90m$(date '+%F %T')\033[0m] ${RED}$1${RESET}"
 }
 
 log_warning() {
-  echo -e "${YELLOW}$1${RESET}"
+  echo -e "[\033[90m$(date '+%F %T')\033[0m] ${YELLOW}$1${RESET}"
 }
+
 
 # 从环境变量中读取值
 SCRIPT_VERSION="${VERSION}"
