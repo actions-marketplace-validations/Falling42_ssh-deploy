@@ -97,12 +97,12 @@ END
 
 # 检查 SSH 是否能连接
 check_ssh_connection() {
-  local max_retries=3
-  local retry_delay=3
+  local max_retries=10
+  local retry_delay=300
   local attempt=1
 
   while (( attempt <= max_retries )); do
-    if ssh -q -o ConnectTimeout=30 remote "echo successful >/dev/null" ; then
+    if ssh -o ConnectTimeout=30 remote "echo successful >/dev/null" ; then
       log_success "SSH connection established."
       return 0
     else
