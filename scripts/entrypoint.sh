@@ -88,7 +88,6 @@ setup_ssh_config() {
 
   if ! grep -q "Host $host_name" /root/.ssh/config 2>/dev/null; then
   echo "${ssh_host} ${host_name}" >> /etc/hosts || log_error "❌ 无法写入 /etc/hosts"
-  cat /etc/hosts
     cat >>/root/.ssh/config <<END
 Host ${host_name}
   HostName ${ssh_host}
@@ -104,22 +103,43 @@ END
 }
 
 # 检查 SSH 是否能连接
+# check_ssh_connection() {
+#   local max_retries=5
+#   local retry_delay=10
+#   local attempt=1
+
+#   while (( attempt <= max_retries )); do
+#     if ssh -o ConnectTimeout=30 remote "echo successful > /dev/null"; then
+#       log_success "SSH connection established."
+#       return 0
+#     else
+#       (( attempt++ ))
+#       sleep "$retry_delay"
+#     fi
+#   done
+
+#   log_error "Error: SSH connection failed after ${max_retries} attempts."
+#   exit 1
+# }
 check_ssh_connection() {
   local max_retries=5
   local retry_delay=10
   local attempt=1
-  cat /root/.ssh/config
+  local err_output
+
   while (( attempt <= max_retries )); do
-    if ssh -o ConnectTimeout=30 remote "echo successful > /dev/null"; then
+    err_output=$(ssh -o ConnectTimeout=30 remote "echo successful > /dev/null" 2>&1)
+    if [ $? -eq 0 ]; then
       log_success "SSH connection established."
       return 0
     else
+      log_warning "SSH connection attempt $attempt failed: $err_output"
       (( attempt++ ))
       sleep "$retry_delay"
     fi
   done
 
-  log_error "Error: SSH connection failed after ${max_retries} attempts."
+  log_error "Error: SSH connection failed after ${max_retries} attempts. Last error: $err_output"
   exit 1
 }
 
