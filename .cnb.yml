@@ -4,32 +4,29 @@ $:
       - docker
       stages:
         - name: build
-          imports: https://cnb.cool/falling42/credentials/-/blob/main/docker-hub.yml
           jobs:
             docker-hub:
-              - name: docker login
-                script: docker login -u ${FL_USER} -p "${FL_PAT}" ${CNB_DOCKER_REGISTRY}
-              - name: build tag
-                script: docker build -f Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH} .
-              - name: push tag
-                script: docker push ${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH}
+              imports: https://cnb.cool/falling42/credentials/-/blob/main/docker-hub.yml
+              script: | 
+                docker login -u ${FL_USER} -p "${FL_PAT}" ${CNB_DOCKER_REGISTRY}
+                docker build -f Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH} .
+                docker push ${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH}
             docker-hub-latest:
-              - name: docker login
-                script: docker login -u ${FL_USER} -p "${FL_PAT}" ${CNB_DOCKER_REGISTRY}
-              - name: build latest
-                script: docker build -f Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_REPO_SLUG_LOWERCASE}:latest .
-              - name: push latest
-                script: docker push ${CNB_REPO_SLUG_LOWERCASE}:latest
+              imports: https://cnb.cool/falling42/credentials/-/blob/main/docker-hub.yml
+              script: |
+                docker login -u ${FL_USER} -p "${FL_PAT}" ${CNB_DOCKER_REGISTRY}
+                docker build -f Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_REPO_SLUG_LOWERCASE}:latest .
+                docker push ${CNB_REPO_SLUG_LOWERCASE}:latest
             cnb:
-              - name: build tag
-                script: docker build -f Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH} .
-              - name: push tag
-                script: docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH}
+              - name: tag
+                script: |
+                  docker build -f Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH} .
+                  docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH}
             cnb-latest:            
-              - name: build latest
-                script: docker build -f Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest .
-              - name: push latest
-                script: docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest
+              - name: latest
+                script: |
+                  docker build -f Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest .
+                  docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest
 
 .build_dev: &build_dev
   script:
