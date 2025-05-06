@@ -1,17 +1,14 @@
 #!/usr/bin/env bash
 
-# 定义颜色
+# -------------------- 颜色定义：用于美化日志输出 --------------------
 RED="\033[31m"
 GREEN="\033[32m"
 YELLOW="\033[33m"
-BLUE="\033[34m"
-MAGENTA="\033[35m"
 CYAN="\033[36m"
 RESET="\033[0m"
 GRAY="\033[90m"
 
-# 输出带颜色的信息
-
+# -------------------- 日志函数 --------------------
 log_info() {
   echo -e "${GRAY}[$(date '+%F %T')]${RESET} ${CYAN}$1${RESET}"
 }
@@ -28,58 +25,53 @@ log_error() {
   echo -e "${GRAY}[$(date '+%F %T')]${RESET} ${RED}$1${RESET}"
 }
 
-# 从环境变量中读取值
+# -------------------- 环境变量读取（CI 平台传入） --------------------
 SCRIPT_VERSION="${VERSION}"
-USE_SCREEN="${PLUGIN_USE_SCREEN:-no}"
-USE_JUMP_HOST="${PLUGIN_USE_JUMP_HOST:-no}"
-JUMP_SSH_HOST="${PLUGIN_JUMP_SSH_HOST:-}"
-JUMP_SSH_USER="${PLUGIN_JUMP_SSH_USER:-}"
-JUMP_SSH_PRIVATE_KEY="${PLUGIN_JUMP_SSH_PRIVATE_KEY:-}"
-JUMP_SSH_PORT="${PLUGIN_JUMP_SSH_PORT:-22}"
-SSH_PRIVATE_KEY="${PLUGIN_SSH_PRIVATE_KEY:-}"
-SSH_HOST="${PLUGIN_SSH_HOST:-}"
-SSH_USER="${PLUGIN_SSH_USER:-}"
-SSH_PORT="${PLUGIN_SSH_PORT:-22}"
-EXECUTE_REMOTE_SCRIPT="${PLUGIN_EXECUTE_REMOTE_SCRIPT:-no}"
-COPY_SCRIPT="${PLUGIN_COPY_SCRIPT:-no}"
-SOURCE_SCRIPT="${PLUGIN_SOURCE_SCRIPT:-}"
-DEPLOY_SCRIPT="${PLUGIN_DEPLOY_SCRIPT:-}"
-TRANSFER_FILES="${PLUGIN_TRANSFER_FILES:-yes}"
-SOURCE_FILE_PATH="${PLUGIN_SOURCE_FILE_PATH:-}"
-DESTINATION_PATH="${PLUGIN_DESTINATION_PATH:-}"
-SERVICE_NAME="${PLUGIN_SERVICE_NAME:-}"
-SERVICE_VERSION="${PLUGIN_SERVICE_VERSION:-}"
+USE_SCREEN="${PLUGIN_USE_SCREEN:-no}"                       # 是否使用 screen 执行远程命令
+USE_JUMP_HOST="${PLUGIN_USE_JUMP_HOST:-no}"                 # 是否使用跳板机
+JUMP_SSH_HOST="${PLUGIN_JUMP_SSH_HOST:-}"                   # 跳板机 IP
+JUMP_SSH_USER="${PLUGIN_JUMP_SSH_USER:-}"                   # 跳板机用户名
+JUMP_SSH_PRIVATE_KEY="${PLUGIN_JUMP_SSH_PRIVATE_KEY:-}"     # 跳板机私钥
+JUMP_SSH_PORT="${PLUGIN_JUMP_SSH_PORT:-22}"                 # 跳板机端口
+SSH_PRIVATE_KEY="${PLUGIN_SSH_PRIVATE_KEY:-}"               # 目标主机私钥
+SSH_HOST="${PLUGIN_SSH_HOST:-}"                             # 目标主机 IP
+SSH_USER="${PLUGIN_SSH_USER:-}"                             # 目标主机用户名
+SSH_PORT="${PLUGIN_SSH_PORT:-22}"                           # 目标主机端口
+EXECUTE_REMOTE_SCRIPT="${PLUGIN_EXECUTE_REMOTE_SCRIPT:-no}" # 是否执行部署脚本
+COPY_SCRIPT="${PLUGIN_COPY_SCRIPT:-no}"                     # 是否拷贝脚本到目标机器
+SOURCE_SCRIPT="${PLUGIN_SOURCE_SCRIPT:-}"                   # 本地脚本路径
+DEPLOY_SCRIPT="${PLUGIN_DEPLOY_SCRIPT:-}"                   # 目标机脚本路径
+TRANSFER_FILES="${PLUGIN_TRANSFER_FILES:-yes}"              # 是否传输文件
+SOURCE_FILE_PATH="${PLUGIN_SOURCE_FILE_PATH:-}"             # 本地文件路径
+DESTINATION_PATH="${PLUGIN_DESTINATION_PATH:-}"             # 目标机路径
+SERVICE_NAME="${PLUGIN_SERVICE_NAME:-}"                     # 服务名称
+SERVICE_VERSION="${PLUGIN_SERVICE_VERSION:-}"               # 服务版本
 
-# 检查必需参数是否为空
+# -------------------- 工具函数定义 --------------------
+
+# 参数不能为空
 check_param() {
   local param_value=$1
   local param_name=$2
-
-  if [ -z "$param_value" ]; then
-    log_error "Error: $param_name is missing."
-    exit 1
-  else
-    # log_info "$param_name is ${BLUE}$param_value${RESET}."
-    log_info "$param_name has been successfully set."
-  fi
+  [ -z "$param_value" ] && log_error "Error: $param_name is missing."
 }
 
+# 初始化 SSH 目录
 ssh_init(){
   mkdir -p ~/.ssh/
   chmod 700 ~/.ssh/
 }
 
-# 设置 SSH 私钥
+# 写入 SSH 私钥文件
 setup_ssh_key() {
   local ssh_key="$1"
   local key_path="$2"
-  
   echo "${ssh_key}" > "${key_path}"
   chmod 600 "${key_path}" || { log_error "Error: Failed to set permissions for ${key_path}."; exit 1; }
   [ ! -f "${key_path}" ] && { log_error "Error: Failed to write SSH private key at ${key_path}."; exit 1; }
 }
 
-# 设置 SSH 配置文件
+# 生成 SSH 配置（支持 ProxyJump）
 setup_ssh_config() {
   local host_name="$1"
   local ssh_host="$2"
@@ -89,7 +81,6 @@ setup_ssh_config() {
   local proxy_jump="$6"
 
   if ! grep -q "Host $host_name" ~/.ssh/config 2>/dev/null; then
-    log_info "Writing SSH configuration for $host_name"
     cat >>~/.ssh/config <<END
 Host ${host_name}
   HostName ${ssh_host}
@@ -101,183 +92,135 @@ Host ${host_name}
   ServerAliveCountMax 3
   ${proxy_jump}
 END
-  else
-    log_info "SSH configuration for $host_name already exists."
   fi
 }
 
-# 检查 SSH 是否能成功连接远程主机，最多重试3次
+# 检查 SSH 是否能连接
 check_ssh_connection() {
   local max_retries=3
   local retry_delay=3
   local attempt=1
 
-  log_info "Checking SSH connectivity to remote host..."
-
   while (( attempt <= max_retries )); do
-    if ssh -q -o ConnectTimeout=10 remote "echo -e '${GREEN}SSH connection successful.${RESET}'" 2>/dev/null; then
-      log_success "SSH connection to remote host succeeded."
+    if ssh -q -o ConnectTimeout=10 remote "echo successful >/dev/null" 2>/dev/null; then
+      log_success "SSH connection established."
       return 0
     else
-      log_warning "Attempt ${attempt}/${max_retries}: SSH connection failed."
-      if (( attempt < max_retries )); then
-        log_info "Retrying in ${retry_delay} seconds..."
-        sleep "$retry_delay"
-      fi
-      ((attempt++))
+      (( attempt++ ))
+      sleep "$retry_delay"
     fi
   done
 
-  log_error "Error: SSH connection failed after ${max_retries} attempts. Please check network, SSH key, host, and user configuration."
+  log_error "Error: SSH connection failed after ${max_retries} attempts."
   exit 1
 }
 
-# TODO 检查并安装 screen
+# 如果远程没有安装 screen，则尝试自动安装
 check_and_install_screen() {
-  log_info "Checking if 'screen' is installed on the remote host..."
-  if ssh -q remote "command -v screen &>/dev/null"; then
-    log_success "'screen' is already installed on the remote host."
-  else
-    log_warning "'screen' is not installed. Attempting to install..."
-    ssh -q remote "if command -v apt-get &>/dev/null; then
-                   sudo apt-get update && sudo apt-get install -y screen;
-                 elif command -v yum &>/dev/null; then
-                   sudo yum install -y screen;
-                 elif command -v dnf &>/dev/null; then
-                   sudo dnf install -y screen;
-                 elif command -v pacman &>/dev/null; then
-                   sudo pacman -Sy screen;
-                 else
-                   echo 'Error: Unsupported package manager. Please install screen manually.';
-                   exit 1;
-                 fi" || { log_error "Error: Failed to install 'screen' on the remote server."; exit 1; }
-    log_success "'screen' installation completed on the remote host."
-  fi
+  ssh -q remote "command -v screen &>/dev/null" || {
+    ssh -q remote "if command -v apt-get &>/dev/null; then sudo apt-get update && sudo apt-get install -y screen; \
+      elif command -v yum &>/dev/null; then sudo yum install -y screen; \
+      elif command -v dnf &>/dev/null; then sudo dnf install -y screen; \
+      elif command -v pacman &>/dev/null; then sudo pacman -Sy screen; \
+      else echo 'Error: No supported package manager.'; exit 1; fi" || {
+        log_error "Error: Failed to install 'screen'."; exit 1; 
+      }
+  }
 }
 
-# 在screen里执行命令
+# 在 screen 中执行命令，支持断线后继续运行
 execute_inscreen() {
   local command="$1"
-  local screen_name="${2:-}"
-
+  local screen_name_prefix="$2"
+  local screen_uuid screen_name
+  screen_uuid="$(uuidgen)"
+  screen_name="${screen_name_prefix:-screen}-${screen_uuid}"
   check_and_install_screen
-  screen_name="$screen_name-$(uuidgen)"
-  log_info "Creating screen session: $screen_name"
-  eval "ssh -q remote sudo screen -dmS $screen_name" || { log_error "Error: Failed to create screen session."; exit 1; }
-  log_info "Executing command in screen: $command"
-  eval "ssh -q remote sudo screen -S $screen_name -X stuff \"\$'$command && exit\n'\"" || { log_error "Error: Failed to execute command in screen."; exit 1; }
-  log_info "Command is executing in screen. Check the screen session for any errors."
+  ssh -q remote sudo screen -dmS $screen_name
+  ssh -q remote sudo screen -S $screen_name -X stuff "\$'$command && exit\n'"
+  log_success "Command dispatched to remote screen session."
 }
 
-# 执行命令
+# 直接 SSH 执行命令
 execute_command() {
   local command="$1"
-
-  log_info "Executing command: $command"
-  eval "ssh -q remote \"$command\"" || { log_error "Error: Failed to execute command."; exit 1; }
-  log_success "Command executed successfully."
+  ssh -q remote "$command" || { log_error "Error: Failed to execute command."; exit 1; }
+  log_success "Command executed on remote host."
 }
 
-# 确保远程目录存在
-ensure_directory_exists() {
-  local remote_dir_path="$1"
-  
-  log_info "Checking if directory ${remote_dir_path} exists on remote host..."
-  if ! ssh -q remote "[ -d ${remote_dir_path} ]" 2>/dev/null; then
-    log_warning "Directory ${remote_dir_path} does not exist. Creating it..."
-    execute_command "sudo mkdir -p ${remote_dir_path}" || { log_error "Error: Failed to create directory ${remote_dir_path}."; exit 1; }
-    log_success "Directory ${remote_dir_path} created successfully."
-  else
-    log_success "Directory ${remote_dir_path} already exists."
-  fi
-}
-
-# 为文件设置权限
+# 设置远程文件权限
 set_permissions() {
-  local remote_file_path="$1"
+  local remote_path="$1"
   local permissions="${2:-755}"
-  
-  log_info "Checking current permissions for ${remote_file_path} on remote host..."
-  current_permissions="$(ssh -q remote "stat -c '%a' ${remote_file_path}")"
-  if [ "$current_permissions" == "$permissions" ]; then
-    log_success "Current permissions for ${remote_file_path} are already set to ${permissions}. No need to change."
-    return 0
-  fi
-  log_info "Setting file permissions for ${remote_file_path} on remote host..."
-  execute_command "sudo chmod ${permissions} ${remote_file_path}" || { log_error "Error: Failed to set file permissions for ${remote_file_path}."; exit 1; }
-  log_success "File permissions for ${remote_file_path} set to ${permissions} successfully."
+  local ssh_user="${SSH_USER:-}"
+  ssh -q remote "sudo chmod ${permissions} ${remote_path} && sudo chown ${ssh_user} ${remote_path}" || {
+    log_error "Error: Failed to set permissions for ${remote_path}."; exit 1; 
+  }
+  log_success "Permissions set for ${remote_path}."
 }
 
-# 传递参数
-config_transfer(){
+# 传输文件（含目录），支持跳过已存在相同 MD5 的文件
+transfer_file() {
   local source="$1"
   local destination="$2"
+  local isdir="false"
+  local dest_dir
 
-  if [[ "${destination: -1}" == "/" ]]; then
-    destination="${destination}$(basename "$source")"
-  fi
-  source_file=$(basename "${source}")
-  dest_dir=$(dirname "${destination}")
-  if [ -d "${source}" ]; then
-    isdir="true"
+  [[ -d "$source" ]] && isdir="true"
+  [[ "${destination: -1}" == "/" ]] && destination="${destination}$(basename "$source")"
+  dest_dir=$(dirname "$destination")
+
+  ssh -q remote "[ -d \"${dest_dir}\" ]" || ssh -q remote "sudo mkdir -p \"${dest_dir}\""
+  set_permissions "${dest_dir}"
+
+  if [ "$isdir" == "true" ]; then
+    scp -q -r "$source" "remote:$destination" || { log_error "Error: Directory transfer failed."; exit 1; }
+    log_success "Directory '$source' transferred to '$destination'."
   else
-    isdir="false"
-  fi
-  echo "${source} ${destination} ${source_file} ${dest_dir} ${isdir}"
-}
-
-# 传输文件
-transfer_file() {
-  local source destination source_file dest_dir isdir
-  # 使用 read 捕获并解包 config_transfer 的输出
-  read -r source destination source_file dest_dir isdir <<< "$(config_transfer "$1" "$2")"
-
-  if ! "${isdir}"; then
-    log_info "Checking if remote file ${destination} exists on remote host..."
-    if ssh -q remote [ -f ${destination} ] ; then
-      log_info "Remote file ${destination} exists. Checking if it is identical to the source file..."
-      source_md5=$(md5sum "${source}" | awk '{print $1}')
-      remote_md5=$(ssh -q "remote" "md5sum ${destination}" | awk '{print $1}')
-      if [ "$source_md5" == "$remote_md5" ]; then
-        log_success "Source file and remote file are identical. No need to transfer."
-        set_permissions "${destination}"
-        return 0
-      else
-        log_warning "Source file and remote file differ."
-      fi
+    local source_md5 remote_md5
+    source_md5=$(md5sum "$source" | awk '{print $1}')
+    remote_md5=$(ssh -q remote "md5sum \"$destination\" 2>/dev/null" | awk '{print $1}')
+    if [ "$source_md5" == "$remote_md5" ]; then
+      log_success "Remote file already up-to-date. Skipping transfer."
     else
-      log_warning "Remote file ${destination} does not exist."
-      ensure_directory_exists "${dest_dir}"
+      scp -q "$source" "remote:$destination" || { log_error "Error: File transfer failed."; exit 1; }
+      log_success "File '$source' transferred to '$destination'."
     fi
-    log_warning "Transferring files from ${source} to remote:${destination}..."
-    scp -q "${source}" "remote:${destination}" || { log_error "Error: File transfer to remote server failed."; exit 1; }
-  else
-    log_warning "${source_file} is a directory."
-    ensure_directory_exists "${dest_dir}"
-    log_warning "Transferring files from ${source} to remote:${destination}..."
-    scp -q -r "${source}" "remote:${destination}" || { log_error "Error: File transfer to remote server failed."; exit 1; }
   fi
-  log_success "File: ${source} transfer to remote:${destination} completed successfully."
-  set_permissions "${destination}"
+
+  set_permissions "$destination"
 }
 
-# 执行远程部署
+# 执行部署脚本（可选用 screen）
 execute_deployment() {
   local deploy_script="$1"
   local service_name="$2"
   local service_version="$3"
-  local screen_name="${service_name}-${service_version}"
-  local command="sudo ${deploy_script} ${service_name} ${service_version}"
+  local screen_name command
+
+  if [ -n "$service_name" ] && [ -n "$service_version" ]; then
+    command="sudo ${deploy_script} ${service_name} ${service_version}"
+    screen_name="${service_name}-${service_version}"
+  else
+    command="sudo ${deploy_script}"
+    screen_name="deploy-script"
+  fi
 
   if [ "$USE_SCREEN" == "yes" ]; then
     execute_inscreen "$command" "$screen_name"
- else
+  else
     execute_command "$command"
   fi
-  log_success "Deployment executed successfully."
+
+  if [ -n "$service_name" ] && [ -n "$service_version" ]; then
+    log_success "Deployment script '${deploy_script}' executed for '${service_name}' version '${service_version}'."
+  else
+    log_success "Deployment script '${deploy_script}' executed."
+  fi
 }
 
-# 检查必需的参数
+
+# 检查所有关键参数是否存在
 check_required_params(){
   check_param "$USE_SCREEN" "Use screen"
   check_param "$USE_JUMP_HOST" "Use jump host"
@@ -289,7 +232,7 @@ check_required_params(){
   check_param "$TRANSFER_FILES" "Transfer files"
 }
 
-# 设置 SSH 环境
+# 执行 SSH 初始化及配置
 setup_ssh(){
   ssh_init
   if [ "$USE_JUMP_HOST" == "yes" ]; then
@@ -307,18 +250,16 @@ setup_ssh(){
   chmod 600 ~/.ssh/config
 }
 
-# 处理文件传输
+# 传输文件（如被启用）
 check_transfer_file(){
   if [ "$TRANSFER_FILES" == "yes" ]; then
     check_param "$SOURCE_FILE_PATH" "Source file path"
     check_param "$DESTINATION_PATH" "Destination path"
     transfer_file "$SOURCE_FILE_PATH" "$DESTINATION_PATH"
-  else
-    log_warning "Skipping file transfer as per configuration."
-  fi    
+  fi
 }
 
-# 处理部署
+# 执行部署脚本（如被启用）
 check_execute_deployment(){
   if [ "$EXECUTE_REMOTE_SCRIPT" == "yes" ]; then
     check_param "$COPY_SCRIPT" "Copy script"
@@ -327,23 +268,17 @@ check_execute_deployment(){
       check_param "$SOURCE_SCRIPT" "Source script"
       transfer_file "$SOURCE_SCRIPT" "$DEPLOY_SCRIPT"
     else
-      if ssh -q remote [ -f ${DEPLOY_SCRIPT} ]; then
-        log_info "Remote script ${DEPLOY_SCRIPT} exists."
-        set_permissions "$DEPLOY_SCRIPT" 
-      else
-        log_error "Error:Remote script ${DEPLOY_SCRIPT} does not exist. Please check your config: DEPLOY_SCRIPT."
-        exit 1
-      fi     
-    fi  
+      ssh -q remote [ -f "${DEPLOY_SCRIPT}" ] && set_permissions "$DEPLOY_SCRIPT" || {
+        log_error "Error: Remote script does not exist: ${DEPLOY_SCRIPT}"; exit 1
+      }
+    fi
     execute_deployment "$DEPLOY_SCRIPT" "$SERVICE_NAME" "$SERVICE_VERSION"
-  else
-    log_warning "Skipping remote script execution as per configuration."
-  fi  
+  fi
 }
 
-# 主函数
+# 主函数入口
 main(){
-  log_info "Script Version: ${MAGENTA}${SCRIPT_VERSION}${RESET}"
+  log_info "Script Version: ${SCRIPT_VERSION}"
   check_required_params
   setup_ssh
   check_ssh_connection
