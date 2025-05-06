@@ -18,15 +18,13 @@ $:
                 docker build -f Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_REPO_SLUG_LOWERCASE}:latest .
                 docker push ${CNB_REPO_SLUG_LOWERCASE}:latest
             cnb:
-              - name: tag
-                script: |
-                  docker build -f Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH} .
-                  docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH}
+              script: |
+                docker build -f Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH} .
+                docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH}
             cnb-latest:            
-              - name: latest
-                script: |
-                  docker build -f Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest .
-                  docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest
+              script: |
+                docker build -f Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest .
+                docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest
 
 .build_dev: &build_dev
   script:
