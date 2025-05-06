@@ -108,11 +108,8 @@ check_ssh_connection() {
   local retry_delay=3
   local attempt=1
 
-  log_info "Checking SSH connectivity to remote host..."
-
   while (( attempt <= max_retries )); do
-    if ssh -q -o ConnectTimeout=10 remote "echo -e '${GREEN}SSH connection successful.${RESET}'" 2>/dev/null; then
-      log_success "SSH connection to remote host succeeded."
+    if ssh -q -o ConnectTimeout=10 remote "echo -e '${GRAY}[$(date '+%F %T')]${RESET} ${GREEN}SSH connection successful${RESET}'" 2>/dev/null; then
       return 0
     else
       log_warning "Attempt ${attempt}/${max_retries}: SSH connection failed."
@@ -130,7 +127,6 @@ check_ssh_connection() {
 
 # TODO 检查并安装 screen
 check_and_install_screen() {
-  log_info "Checking if 'screen' is installed on the remote host..."
   if ssh -q remote "command -v screen &>/dev/null"; then
     log_success "'screen' is already installed on the remote host."
   else
@@ -191,20 +187,17 @@ set_permissions() {
   current_permissions="$(ssh -q remote "stat -c '%a' \"${remote_path}\"" 2>/dev/null || echo "unknown")"
 
   if [ "$current_permissions" == "$permissions" ]; then
-    log_success "Permissions already set."
   else
     execute_command "sudo chmod ${permissions} ${remote_path}" || {
       log_error "Error: Failed to set permissions."
       exit 1
     }
-    log_success "Permissions set successfully."
   fi
 
   execute_command "sudo chown ${ssh_user} ${remote_path}" || {
     log_error "Error: Failed to change owner."
     exit 1
   }
-  log_success "Ownership updated successfully."
 }
 
 
@@ -261,7 +254,6 @@ transfer_file() {
   fi
 
   set_permissions "${destination}"
-  log_success "File transfer complete."
 }
 
 
