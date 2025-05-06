@@ -237,7 +237,7 @@ check_execute_deployment(){
       check_param "$SOURCE_SCRIPT" "Source script"
       transfer_file "$SOURCE_SCRIPT" "$DEPLOY_SCRIPT"
     else
-      ssh -q remote [ -f ${DEPLOY_SCRIPT} ] && set_permissions "$DEPLOY_SCRIPT" || {
+      ssh -q remote [ -f "${DEPLOY_SCRIPT}" ] && set_permissions "$DEPLOY_SCRIPT" || {
         log_error "Error: Remote script does not exist: ${DEPLOY_SCRIPT}"; exit 1
       }
     fi
