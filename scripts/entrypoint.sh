@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# 定义颜色
+# -------------------- 颜色定义：用于美化日志输出 --------------------
 RED="\033[31m"
 GREEN="\033[32m"
 YELLOW="\033[33m"
@@ -8,6 +8,7 @@ CYAN="\033[36m"
 RESET="\033[0m"
 GRAY="\033[90m"
 
+# -------------------- 日志函数 --------------------
 log_info() {
   echo -e "${GRAY}[$(date '+%F %T')]${RESET} ${CYAN}$1${RESET}"
 }
@@ -24,38 +25,44 @@ log_error() {
   echo -e "${GRAY}[$(date '+%F %T')]${RESET} ${RED}$1${RESET}"
 }
 
+# -------------------- 环境变量读取（CI 平台传入） --------------------
 SCRIPT_VERSION="${VERSION}"
-USE_SCREEN="${PLUGIN_USE_SCREEN:-no}"
-USE_JUMP_HOST="${PLUGIN_USE_JUMP_HOST:-no}"
-JUMP_SSH_HOST="${PLUGIN_JUMP_SSH_HOST:-}"
-JUMP_SSH_USER="${PLUGIN_JUMP_SSH_USER:-}"
-JUMP_SSH_PRIVATE_KEY="${PLUGIN_JUMP_SSH_PRIVATE_KEY:-}"
-JUMP_SSH_PORT="${PLUGIN_JUMP_SSH_PORT:-22}"
-SSH_PRIVATE_KEY="${PLUGIN_SSH_PRIVATE_KEY:-}"
-SSH_HOST="${PLUGIN_SSH_HOST:-}"
-SSH_USER="${PLUGIN_SSH_USER:-}"
-SSH_PORT="${PLUGIN_SSH_PORT:-22}"
-EXECUTE_REMOTE_SCRIPT="${PLUGIN_EXECUTE_REMOTE_SCRIPT:-no}"
-COPY_SCRIPT="${PLUGIN_COPY_SCRIPT:-no}"
-SOURCE_SCRIPT="${PLUGIN_SOURCE_SCRIPT:-}"
-DEPLOY_SCRIPT="${PLUGIN_DEPLOY_SCRIPT:-}"
-TRANSFER_FILES="${PLUGIN_TRANSFER_FILES:-yes}"
-SOURCE_FILE_PATH="${PLUGIN_SOURCE_FILE_PATH:-}"
-DESTINATION_PATH="${PLUGIN_DESTINATION_PATH:-}"
-SERVICE_NAME="${PLUGIN_SERVICE_NAME:-}"
-SERVICE_VERSION="${PLUGIN_SERVICE_VERSION:-}"
+USE_SCREEN="${PLUGIN_USE_SCREEN:-no}"                       # 是否使用 screen 执行远程命令
+USE_JUMP_HOST="${PLUGIN_USE_JUMP_HOST:-no}"                 # 是否使用跳板机
+JUMP_SSH_HOST="${PLUGIN_JUMP_SSH_HOST:-}"                   # 跳板机 IP
+JUMP_SSH_USER="${PLUGIN_JUMP_SSH_USER:-}"                   # 跳板机用户名
+JUMP_SSH_PRIVATE_KEY="${PLUGIN_JUMP_SSH_PRIVATE_KEY:-}"     # 跳板机私钥
+JUMP_SSH_PORT="${PLUGIN_JUMP_SSH_PORT:-22}"                 # 跳板机端口
+SSH_PRIVATE_KEY="${PLUGIN_SSH_PRIVATE_KEY:-}"               # 目标主机私钥
+SSH_HOST="${PLUGIN_SSH_HOST:-}"                             # 目标主机 IP
+SSH_USER="${PLUGIN_SSH_USER:-}"                             # 目标主机用户名
+SSH_PORT="${PLUGIN_SSH_PORT:-22}"                           # 目标主机端口
+EXECUTE_REMOTE_SCRIPT="${PLUGIN_EXECUTE_REMOTE_SCRIPT:-no}" # 是否执行部署脚本
+COPY_SCRIPT="${PLUGIN_COPY_SCRIPT:-no}"                     # 是否拷贝脚本到目标机器
+SOURCE_SCRIPT="${PLUGIN_SOURCE_SCRIPT:-}"                   # 本地脚本路径
+DEPLOY_SCRIPT="${PLUGIN_DEPLOY_SCRIPT:-}"                   # 目标机脚本路径
+TRANSFER_FILES="${PLUGIN_TRANSFER_FILES:-yes}"              # 是否传输文件
+SOURCE_FILE_PATH="${PLUGIN_SOURCE_FILE_PATH:-}"             # 本地文件路径
+DESTINATION_PATH="${PLUGIN_DESTINATION_PATH:-}"             # 目标机路径
+SERVICE_NAME="${PLUGIN_SERVICE_NAME:-}"                     # 服务名称
+SERVICE_VERSION="${PLUGIN_SERVICE_VERSION:-}"               # 服务版本
 
+# -------------------- 工具函数定义 --------------------
+
+# 参数不能为空
 check_param() {
   local param_value=$1
   local param_name=$2
   [ -z "$param_value" ] && log_error "Error: $param_name is missing."
 }
 
+# 初始化 SSH 目录
 ssh_init(){
   mkdir -p ~/.ssh/
   chmod 700 ~/.ssh/
 }
 
+# 写入 SSH 私钥文件
 setup_ssh_key() {
   local ssh_key="$1"
   local key_path="$2"
@@ -64,6 +71,7 @@ setup_ssh_key() {
   [ ! -f "${key_path}" ] && { log_error "Error: Failed to write SSH private key at ${key_path}."; exit 1; }
 }
 
+# 生成 SSH 配置（支持 ProxyJump）
 setup_ssh_config() {
   local host_name="$1"
   local ssh_host="$2"
@@ -87,6 +95,7 @@ END
   fi
 }
 
+# 检查 SSH 是否能连接
 check_ssh_connection() {
   local max_retries=3
   local retry_delay=3
@@ -106,6 +115,7 @@ check_ssh_connection() {
   exit 1
 }
 
+# 如果远程没有安装 screen，则尝试自动安装
 check_and_install_screen() {
   ssh -q remote "command -v screen &>/dev/null" || {
     ssh -q remote "if command -v apt-get &>/dev/null; then sudo apt-get update && sudo apt-get install -y screen; \
@@ -118,6 +128,7 @@ check_and_install_screen() {
   }
 }
 
+# 在 screen 中执行命令，支持断线后继续运行
 execute_inscreen() {
   local command="$1"
   local screen_name_prefix="$2"
@@ -130,12 +141,14 @@ execute_inscreen() {
   log_success "Command dispatched to remote screen session."
 }
 
+# 直接 SSH 执行命令
 execute_command() {
   local command="$1"
   ssh -q remote "$command" || { log_error "Error: Failed to execute command."; exit 1; }
   log_success "Command executed on remote host."
 }
 
+# 设置远程文件权限
 set_permissions() {
   local remote_path="$1"
   local permissions="${2:-755}"
@@ -146,6 +159,7 @@ set_permissions() {
   log_success "Permissions set for ${remote_path}."
 }
 
+# 传输文件（含目录），支持跳过已存在相同 MD5 的文件
 transfer_file() {
   local source="$1"
   local destination="$2"
@@ -177,6 +191,7 @@ transfer_file() {
   set_permissions "$destination"
 }
 
+# 执行部署脚本（可选用 screen）
 execute_deployment() {
   local deploy_script="$1"
   local service_name="$2"
@@ -193,6 +208,7 @@ execute_deployment() {
   log_success "Deployment script '${deploy_script}' executed for '${service_name}' version '${service_version}'."
 }
 
+# 检查所有关键参数是否存在
 check_required_params(){
   check_param "$USE_SCREEN" "Use screen"
   check_param "$USE_JUMP_HOST" "Use jump host"
@@ -204,6 +220,7 @@ check_required_params(){
   check_param "$TRANSFER_FILES" "Transfer files"
 }
 
+# 执行 SSH 初始化及配置
 setup_ssh(){
   ssh_init
   if [ "$USE_JUMP_HOST" == "yes" ]; then
@@ -221,6 +238,7 @@ setup_ssh(){
   chmod 600 ~/.ssh/config
 }
 
+# 传输文件（如被启用）
 check_transfer_file(){
   if [ "$TRANSFER_FILES" == "yes" ]; then
     check_param "$SOURCE_FILE_PATH" "Source file path"
@@ -229,6 +247,7 @@ check_transfer_file(){
   fi
 }
 
+# 执行部署脚本（如被启用）
 check_execute_deployment(){
   if [ "$EXECUTE_REMOTE_SCRIPT" == "yes" ]; then
     check_param "$COPY_SCRIPT" "Copy script"
@@ -245,6 +264,7 @@ check_execute_deployment(){
   fi
 }
 
+# 主函数入口
 main(){
   log_info "Script Version: ${SCRIPT_VERSION}"
   check_required_params
