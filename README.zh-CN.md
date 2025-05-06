@@ -1,13 +1,13 @@
 # Deploy via SSH
 
- [English](README.md) | [简体中文](README.CN.md)
+ [English](README.md) | [简体中文](README.zh-CN.md)
 
 **Deploy via SSH** 是一个通过 SSH 部署应用的 GitHub Action。它支持文件传输、执行远程脚本，并可以使用跳板机进行安全的 SSH 连接。
 
 ## 功能特点
 
 - **SSH 连接**：通过 SSH 连接到远程服务器，支持使用跳板机连接。
-- **文件传输**：可以从您的仓库将文件传输到远程服务器。
+- **文件传输**：通过 SCP 从您的仓库将文件传输到远程服务器。
 - **远程脚本执行**：在远程服务器上执行部署脚本。
 - **支持 `screen` 会话**：使用 `screen` 确保即使 SSH 会话结束后，部署任务仍然继续执行（**请确保远程服务器已经安装`screen`**）。
 - **灵活配置**：通过输入参数配置 SSH 设置、文件传输和脚本执行。
@@ -36,13 +36,15 @@
 | `ssh_port`              | 远程服务器的 SSH 端口 (默认值为 `22`)             | 否       | `22`   |
 | `execute_remote_script` | 是否执行远程脚本 (`yes` 或 `no`)                  | 否       | `no`   |
 | `copy_script`           | 是否从您的仓库中复制部署脚本 (`yes` 或 `no`)      | 否       | `no`   |
-| `source_script`         | 仓库中源脚本的相对路径 (必须包含文件名)           | 否       |        |
-| `deploy_script`         | 远程服务器上部署脚本的完整路径 (必须包含文件名)   | 否       |        |
+| `source_script`         | 仓库中源脚本的相对路径                            | 否       |        |
+| `deploy_script`         | 远程服务器上部署脚本的绝对路径(必须包含文件名)    | 否       |        |
 | `service_name`          | 要部署的服务名称                                  | 否       |        |
 | `service_version`       | 要部署的服务版本                                  | 否       |        |
 | `transfer_files`        | 是否将文件传输到远程服务器 (`yes` 或 `no`)        | 是       | `yes`  |
-| `source_file_path`      | 要上传的文件在仓库中的相对路径 (必须包含文件名)   | 否       |        |
-| `destination_path`      | 远程服务器上要传输文件的完整路径 (可不包含文件名) | 否       |        |
+| `source_file_path`      | 要上传的文件在仓库中的相对路径                    | 否       |        |
+| `destination_path`      | 远程服务器上要传输文件的绝对路径 (可不包含文件名) | 否       |        |
+
+**请注意 `destination_path` 的使用，当目标路径例如 `/data/dir2/` 结尾带有 `/` 时，源目录`./dir1/`会被传输至`/data/dir2/dir1`**
 
 ## 示例工作流
 

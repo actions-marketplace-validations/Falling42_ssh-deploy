@@ -158,10 +158,18 @@ check_and_install_screen() {
 # 在screen里执行命令
 execute_inscreen() {
   local command="$1"
-  local screen_name="${2:-}"
+  local screen_name_prefix="${2:-}"
+  local screen_uuid
+  screen_uuid="$(uuidgen)"
 
   check_and_install_screen
-  screen_name="$screen_name-$(uuidgen)"
+
+  if [ -z "$screen_name_prefix" ]; then
+    screen_name="$screen_uuid"
+  else
+    screen_name="${screen_name_prefix}-${screen_uuid}"
+  fi
+
   log_info "Creating screen session: $screen_name"
   eval "ssh -q remote sudo screen -dmS $screen_name" || { log_error "Error: Failed to create screen session."; exit 1; }
   log_info "Executing command in screen: $command"
@@ -178,96 +186,105 @@ execute_command() {
   log_success "Command executed successfully."
 }
 
-# 确保远程目录存在
-ensure_directory_exists() {
-  local remote_dir_path="$1"
-  
-  log_info "Checking if directory ${remote_dir_path} exists on remote host..."
-  if ! ssh -q remote "[ -d ${remote_dir_path} ]" 2>/dev/null; then
-    log_warning "Directory ${remote_dir_path} does not exist. Creating it..."
-    execute_command "sudo mkdir -p ${remote_dir_path}" || { log_error "Error: Failed to create directory ${remote_dir_path}."; exit 1; }
-    log_success "Directory ${remote_dir_path} created successfully."
-  else
-    log_success "Directory ${remote_dir_path} already exists."
-  fi
-}
-
-# 为文件设置权限
+# 设置远程文件或目录权限，并将属主设置为 SSH 用户（保留原组）
 set_permissions() {
-  local remote_file_path="$1"
+  local remote_path="$1"
   local permissions="${2:-755}"
-  
-  log_info "Checking current permissions for ${remote_file_path} on remote host..."
-  current_permissions="$(ssh -q remote "stat -c '%a' ${remote_file_path}")"
+  local ssh_user="${SSH_USER:-}"
+
+  log_info "Checking current permissions for ${remote_path} on remote host..."
+  current_permissions="$(ssh -q remote "stat -c '%a' \"${remote_path}\"" 2>/dev/null || echo "unknown")"
+
   if [ "$current_permissions" == "$permissions" ]; then
-    log_success "Current permissions for ${remote_file_path} are already set to ${permissions}. No need to change."
-    return 0
-  fi
-  log_info "Setting file permissions for ${remote_file_path} on remote host..."
-  execute_command "sudo chmod ${permissions} ${remote_file_path}" || { log_error "Error: Failed to set file permissions for ${remote_file_path}."; exit 1; }
-  log_success "File permissions for ${remote_file_path} set to ${permissions} successfully."
-}
-
-# 传递参数
-config_transfer(){
-  local source="$1"
-  local destination="$2"
-
-  if [[ "${destination: -1}" == "/" ]]; then
-    destination="${destination}$(basename "$source")"
-  fi
-  source_file=$(basename "${source}")
-  dest_dir=$(dirname "${destination}")
-  if [ -d "${source}" ]; then
-    isdir="true"
+    log_success "Permissions already set to ${permissions} for ${remote_path}."
   else
-    isdir="false"
+    log_info "Setting permissions for ${remote_path} to ${permissions}..."
+    execute_command "sudo chmod ${permissions} ${remote_path}" || {
+      log_error "Error: Failed to set permissions for ${remote_path}."
+      exit 1
+    }
+    log_success "Permissions set to ${permissions} for ${remote_path}."
   fi
-  echo "${source} ${destination} ${source_file} ${dest_dir} ${isdir}"
+
+  log_info "Setting owner of ${remote_path} to ${ssh_user} (group unchanged)..."
+  execute_command "sudo chown ${ssh_user} ${remote_path}" || {
+    log_error "Error: Failed to change owner for ${remote_path}."
+    exit 1
+  }
+  log_success "Owner of ${remote_path} set to ${ssh_user} successfully."
 }
+
 
 # 传输文件
 transfer_file() {
-  local source destination source_file dest_dir isdir
-  # 使用 read 捕获并解包 config_transfer 的输出
-  read -r source destination source_file dest_dir isdir <<< "$(config_transfer "$1" "$2")"
+  local source="$1"
+  local destination="$2"
+  local ssh_user="${SSH_USER:-}"
+  local isdir="false"
+  local dest_dir
 
-  if ! "${isdir}"; then
-    log_info "Checking if remote file ${destination} exists on remote host..."
-    if ssh -q remote [ -f ${destination} ] ; then
-      log_info "Remote file ${destination} exists. Checking if it is identical to the source file..."
-      source_md5=$(md5sum "${source}" | awk '{print $1}')
-      remote_md5=$(ssh -q "remote" "md5sum ${destination}" | awk '{print $1}')
-      if [ "$source_md5" == "$remote_md5" ]; then
-        log_success "Source file and remote file are identical. No need to transfer."
-        set_permissions "${destination}"
-        return 0
-      else
-        log_warning "Source file and remote file differ."
-      fi
-    else
-      log_warning "Remote file ${destination} does not exist."
-      ensure_directory_exists "${dest_dir}"
-    fi
-    log_warning "Transferring files from ${source} to remote:${destination}..."
-    scp -q "${source}" "remote:${destination}" || { log_error "Error: File transfer to remote server failed."; exit 1; }
-  else
-    log_warning "${source_file} is a directory."
-    ensure_directory_exists "${dest_dir}"
-    log_warning "Transferring files from ${source} to remote:${destination}..."
-    scp -q -r "${source}" "remote:${destination}" || { log_error "Error: File transfer to remote server failed."; exit 1; }
+  # 如果源文件是目录
+  if [[ -d "$source" ]]; then
+    isdir="true"
   fi
-  log_success "File: ${source} transfer to remote:${destination} completed successfully."
+  
+  # 如果目标路径加了"/"
+  if [[ "${destination: -1}" == "/" ]]; then
+    destination="${destination}$(basename "$source")"
+  fi
+
+  dest_dir=$(dirname "${destination}")
+
+  log_info "Ensuring remote directory exists: ${dest_dir}"
+  if ! ssh -q remote "[ -d \"${dest_dir}\" ]"; then
+    execute_command "sudo mkdir -p \"${dest_dir}\"" || {
+      log_error "Error: Failed to create remote directory."
+      exit 1
+    }
+  fi
+  set_permissions "${dest_dir}"
+
+  if [ "$isdir" == "true" ]; then
+    log_info "Transferring directory..."
+    scp -q -r "${source}" "remote:${destination}" || {
+      log_error "Error: Directory transfer failed."
+      exit 1
+    }
+  else
+    if ssh -q remote "[ -f \"${destination}\" ]"; then
+      local source_md5 remote_md5
+      source_md5=$(md5sum "${source}" | awk '{print $1}')
+      remote_md5=$(ssh -q remote "md5sum \"${destination}\" 2>/dev/null" | awk '{print $1}')
+      if [ "$source_md5" == "$remote_md5" ]; then
+        log_success "Remote file is identical, skipping transfer."
+        return 0
+      fi
+    fi
+    log_info "Transferring file..."
+    scp -q "${source}" "remote:${destination}" || {
+      log_error "Error: File transfer failed."
+      exit 1
+    }
+  fi
+
   set_permissions "${destination}"
+  log_success "File transfer complete: ${destination}"
 }
+
+
 
 # 执行远程部署
 execute_deployment() {
   local deploy_script="$1"
   local service_name="$2"
   local service_version="$3"
-  local screen_name="${service_name}-${service_version}"
+  local screen_name=""
   local command="sudo ${deploy_script} ${service_name} ${service_version}"
+
+  # 设置 screen_name（仅当 service_name 和 service_version 均非空）
+  if [ -n "$service_name" ] && [ -n "$service_version" ]; then
+    screen_name="${service_name}-${service_version}"
+  fi
 
   if [ "$USE_SCREEN" == "yes" ]; then
     execute_inscreen "$command" "$screen_name"
@@ -329,7 +346,7 @@ check_execute_deployment(){
     else
       if ssh -q remote [ -f ${DEPLOY_SCRIPT} ]; then
         log_info "Remote script ${DEPLOY_SCRIPT} exists."
-        set_permissions "$DEPLOY_SCRIPT" 
+        set_permissions "${DEPLOY_SCRIPT}"
       else
         log_error "Error:Remote script ${DEPLOY_SCRIPT} does not exist. Please check your config: DEPLOY_SCRIPT."
         exit 1
