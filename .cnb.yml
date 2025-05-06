@@ -42,7 +42,6 @@ master:
           imports: https://cnb.cool/falling42/credentials/-/blob/main/env.yml
           settings:
             sync_mode: push
-            branch: master
             target_url: https://github.com/Falling42/ssh-deploy.git
             auth_type: https
             username: ${GIT_USERNAME}
