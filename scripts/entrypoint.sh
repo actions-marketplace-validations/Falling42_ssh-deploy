@@ -64,8 +64,8 @@ check_param() {
 
 # 初始化 SSH 目录
 ssh_init(){
-  mkdir -p ~/.ssh/
-  chmod 700 ~/.ssh/
+  mkdir -p /root/.ssh/
+  chmod 700 /root/.ssh/
 }
 
 # 写入 SSH 私钥文件
@@ -86,8 +86,8 @@ setup_ssh_config() {
   local ssh_port="${5:-22}"
   local proxy_jump="$6"
 
-  if ! grep -q "Host $host_name" ~/.ssh/config 2>/dev/null; then
-    cat >>~/.ssh/config <<END
+  if ! grep -q "Host $host_name" /root/.ssh/config 2>/dev/null; then
+    cat >>/root/.ssh/config <<END
 Host ${host_name}
   HostName ${ssh_host}
   User ${ssh_user}
@@ -106,7 +106,7 @@ check_ssh_connection() {
   local max_retries=3
   local retry_delay=10
   local attempt=1
-
+  cat /root/.ssh/config
   while (( attempt <= max_retries )); do
     if ssh -o ConnectTimeout=30 remote "echo successful >/dev/null" 2>/dev/null; then
       log_success "SSH connection established."
@@ -245,15 +245,15 @@ setup_ssh(){
     check_param "$JUMP_SSH_HOST" "Jump SSH host"
     check_param "$JUMP_SSH_USER" "Jump SSH user"
     check_param "$JUMP_SSH_PRIVATE_KEY" "Jump SSH private key"
-    setup_ssh_key "$JUMP_SSH_PRIVATE_KEY" ~/.ssh/jump.key
-    setup_ssh_key "$SSH_PRIVATE_KEY" ~/.ssh/remote.key
-    setup_ssh_config "jump" "$JUMP_SSH_HOST" "$JUMP_SSH_USER" "~/.ssh/jump.key" "$JUMP_SSH_PORT"  ""
-    setup_ssh_config "remote" "$SSH_HOST" "$SSH_USER" "~/.ssh/remote.key" "$SSH_PORT"  "ProxyJump jump"
+    setup_ssh_key "$JUMP_SSH_PRIVATE_KEY" /root/.ssh/jump.key
+    setup_ssh_key "$SSH_PRIVATE_KEY" /root/.ssh/remote.key
+    setup_ssh_config "jump" "$JUMP_SSH_HOST" "$JUMP_SSH_USER" "/root/.ssh/jump.key" "$JUMP_SSH_PORT"  ""
+    setup_ssh_config "remote" "$SSH_HOST" "$SSH_USER" "/root/.ssh/remote.key" "$SSH_PORT"  "ProxyJump jump"
   else
-    setup_ssh_key "$SSH_PRIVATE_KEY" ~/.ssh/remote.key
-    setup_ssh_config "remote" "$SSH_HOST" "$SSH_USER" "~/.ssh/remote.key" "$SSH_PORT"  ""
+    setup_ssh_key "$SSH_PRIVATE_KEY" /root/.ssh/remote.key
+    setup_ssh_config "remote" "$SSH_HOST" "$SSH_USER" "/root/.ssh/remote.key" "$SSH_PORT"  ""
   fi
-  chmod 600 ~/.ssh/config
+  chmod 600 /root/.ssh/config
 }
 
 # 传输文件（如被启用）
