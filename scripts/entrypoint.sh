@@ -57,10 +57,6 @@ check_param() {
 
   if [ -z "$param_value" ]; then
     log_error "Error: $param_name is missing."
-    exit 1
-  else
-    # log_info "$param_name is ${BLUE}$param_value${RESET}."
-    log_info "$param_name has been successfully set."
   fi
 }
 
@@ -183,7 +179,6 @@ execute_command() {
 
   # log_info "Executing command: $command"
   eval "ssh -q remote \"$command\"" || { log_error "Error: Failed to execute command."; exit 1; }
-  log_success "Command executed successfully."
 }
 
 # 设置远程文件或目录权限，并将属主设置为 SSH 用户（保留原组）
@@ -198,7 +193,6 @@ set_permissions() {
   if [ "$current_permissions" == "$permissions" ]; then
     log_success "Permissions already set."
   else
-    log_info "Setting permissions..."
     execute_command "sudo chmod ${permissions} ${remote_path}" || {
       log_error "Error: Failed to set permissions."
       exit 1
@@ -206,7 +200,6 @@ set_permissions() {
     log_success "Permissions set successfully."
   fi
 
-  log_info "Setting file owner..."
   execute_command "sudo chown ${ssh_user} ${remote_path}" || {
     log_error "Error: Failed to change owner."
     exit 1

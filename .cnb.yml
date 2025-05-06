@@ -48,6 +48,6 @@ dev:
             execute_remote_script: 'yes' # Enable this for the following parameters to take effect
             copy_script: 'yes' # If disabled, the deploy_script must already exist on the remote server
             source_script: 'test/test.sh' # Ensure this file exists in your repository
-            deploy_script: '/opt/test/scripts/test-deploy.sh' # This file will be overwritten each time if copy_script is enabled
+            deploy_script: '/opt/test/test/scripts/test-deploy.sh' # This file will be overwritten each time if copy_script is enabled
             # service_name: 'falling42-test' # Can be hardcoded or use an upstream variable
             # service_version: ${CNB_COMMIT_SHORT} # Populate from upstream variable if needed by your deploy script
