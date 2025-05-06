@@ -87,6 +87,7 @@ setup_ssh_config() {
   local proxy_jump="$6"
 
   if ! grep -q "Host $host_name" /root/.ssh/config 2>/dev/null; then
+  echo "${ssh_host} ${host_name}" >> /etc/hosts || log_error "❌ 无法写入 /etc/hosts"
     cat >>/root/.ssh/config <<END
 Host ${host_name}
   HostName ${ssh_host}
