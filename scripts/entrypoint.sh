@@ -102,7 +102,7 @@ check_ssh_connection() {
   local attempt=1
 
   while (( attempt <= max_retries )); do
-    if ssh -q -o ConnectTimeout=10 remote "echo successful >/dev/null" 2>/dev/null; then
+    if ssh -q -o ConnectTimeout=30 remote "echo successful >/dev/null" 2>/dev/null; then
       log_success "SSH connection established."
       return 0
     else
