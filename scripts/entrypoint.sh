@@ -172,7 +172,7 @@ execute_inscreen() {
 
   log_info "Creating screen session: $screen_name"
   eval "ssh -q remote sudo screen -dmS $screen_name" || { log_error "Error: Failed to create screen session."; exit 1; }
-  log_info "Executing command in screen: $command"
+  # log_info "Executing command in screen: $command"
   eval "ssh -q remote sudo screen -S $screen_name -X stuff \"\$'$command && exit\n'\"" || { log_error "Error: Failed to execute command in screen."; exit 1; }
   log_info "Command is executing in screen. Check the screen session for any errors."
 }
@@ -181,7 +181,7 @@ execute_inscreen() {
 execute_command() {
   local command="$1"
 
-  log_info "Executing command: $command"
+  # log_info "Executing command: $command"
   eval "ssh -q remote \"$command\"" || { log_error "Error: Failed to execute command."; exit 1; }
   log_success "Command executed successfully."
 }
@@ -192,26 +192,26 @@ set_permissions() {
   local permissions="${2:-755}"
   local ssh_user="${SSH_USER:-}"
 
-  log_info "Checking current permissions for ${remote_path} on remote host..."
+  log_info "Checking current permissions on remote host..."
   current_permissions="$(ssh -q remote "stat -c '%a' \"${remote_path}\"" 2>/dev/null || echo "unknown")"
 
   if [ "$current_permissions" == "$permissions" ]; then
-    log_success "Permissions already set to ${permissions} for ${remote_path}."
+    log_success "Permissions already set."
   else
-    log_info "Setting permissions for ${remote_path} to ${permissions}..."
+    log_info "Setting permissions..."
     execute_command "sudo chmod ${permissions} ${remote_path}" || {
-      log_error "Error: Failed to set permissions for ${remote_path}."
+      log_error "Error: Failed to set permissions."
       exit 1
     }
-    log_success "Permissions set to ${permissions} for ${remote_path}."
+    log_success "Permissions set successfully."
   fi
 
-  log_info "Setting owner of ${remote_path} to ${ssh_user} (group unchanged)..."
+  log_info "Setting file owner..."
   execute_command "sudo chown ${ssh_user} ${remote_path}" || {
-    log_error "Error: Failed to change owner for ${remote_path}."
+    log_error "Error: Failed to change owner."
     exit 1
   }
-  log_success "Owner of ${remote_path} set to ${ssh_user} successfully."
+  log_success "Ownership updated successfully."
 }
 
 
@@ -235,7 +235,7 @@ transfer_file() {
 
   dest_dir=$(dirname "${destination}")
 
-  log_info "Ensuring remote directory exists: ${dest_dir}"
+  log_info "Ensuring remote directory exists..."
   if ! ssh -q remote "[ -d \"${dest_dir}\" ]"; then
     execute_command "sudo mkdir -p \"${dest_dir}\"" || {
       log_error "Error: Failed to create remote directory."
@@ -268,7 +268,7 @@ transfer_file() {
   fi
 
   set_permissions "${destination}"
-  log_success "File transfer complete: ${destination}"
+  log_success "File transfer complete."
 }
 
 
@@ -345,10 +345,10 @@ check_execute_deployment(){
       transfer_file "$SOURCE_SCRIPT" "$DEPLOY_SCRIPT"
     else
       if ssh -q remote [ -f ${DEPLOY_SCRIPT} ]; then
-        log_info "Remote script ${DEPLOY_SCRIPT} exists."
+        log_info "Remote script exists."
         set_permissions "${DEPLOY_SCRIPT}"
       else
-        log_error "Error:Remote script ${DEPLOY_SCRIPT} does not exist. Please check your config: DEPLOY_SCRIPT."
+        log_error "Error: Remote script does not exist. Please check your config: DEPLOY_SCRIPT."
         exit 1
       fi     
     fi  
