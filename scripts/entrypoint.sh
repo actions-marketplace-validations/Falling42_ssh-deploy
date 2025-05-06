@@ -197,16 +197,28 @@ execute_deployment() {
   local service_name="$2"
   local service_version="$3"
   local screen_name command
-  command="sudo ${deploy_script} ${service_name} ${service_version}"
-  screen_name="${service_name}-${service_version}"
+
+  if [ -n "$service_name" ] && [ -n "$service_version" ]; then
+    command="sudo ${deploy_script} ${service_name} ${service_version}"
+    screen_name="${service_name}-${service_version}"
+  else
+    command="sudo ${deploy_script}"
+    screen_name="deploy-script"
+  fi
 
   if [ "$USE_SCREEN" == "yes" ]; then
     execute_inscreen "$command" "$screen_name"
   else
     execute_command "$command"
   fi
-  log_success "Deployment script '${deploy_script}' executed for '${service_name}' version '${service_version}'."
+
+  if [ -n "$service_name" ] && [ -n "$service_version" ]; then
+    log_success "Deployment script '${deploy_script}' executed for '${service_name}' version '${service_version}'."
+  else
+    log_success "Deployment script '${deploy_script}' executed."
+  fi
 }
+
 
 # 检查所有关键参数是否存在
 check_required_params(){
