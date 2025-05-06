@@ -183,7 +183,6 @@ set_permissions() {
   local permissions="${2:-755}"
   local ssh_user="${SSH_USER:-}"
 
-  log_info "Checking current permissions on remote host..."
   current_permissions="$(ssh -q remote "stat -c '%a' \"${remote_path}\"" 2>/dev/null || echo "unknown")"
 
   if [ "$current_permissions" != "$permissions" ]; then
