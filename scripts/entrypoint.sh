@@ -109,7 +109,7 @@ check_ssh_connection() {
   local attempt=1
 
   while (( attempt <= max_retries )); do
-    if ssh -q -o ConnectTimeout=10 remote "echo -e '${GRAY}[$(date '+%F %T')]${RESET} ${GREEN}SSH connection successful${RESET}'" 2>/dev/null; then
+    if ssh -q -o ConnectTimeout=10 remote "echo -e '${GRAY}[\$(date +%F\ %T)]${RESET} ${GREEN}SSH connection successful${RESET}'" 2>/dev/null; then
       return 0
     else
       log_warning "Attempt ${attempt}/${max_retries}: SSH connection failed."
@@ -186,8 +186,7 @@ set_permissions() {
   log_info "Checking current permissions on remote host..."
   current_permissions="$(ssh -q remote "stat -c '%a' \"${remote_path}\"" 2>/dev/null || echo "unknown")"
 
-  if [ "$current_permissions" == "$permissions" ]; then
-  else
+  if [ "$current_permissions" != "$permissions" ]; then
     execute_command "sudo chmod ${permissions} ${remote_path}" || {
       log_error "Error: Failed to set permissions."
       exit 1
