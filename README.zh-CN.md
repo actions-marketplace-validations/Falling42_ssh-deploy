@@ -73,7 +73,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Deploy Application via SSH
-        uses: falling42/ssh-deploy@v0.1.1
+        uses: falling42/ssh-deploy@v0.1.2
         with:
           ssh_host: ${{ secrets.SSH_HOST }}
           ssh_user: ${{ secrets.SSH_USER }}
@@ -94,7 +94,7 @@ jobs:
 
 ```yaml
       - name: Deploy with Jump Host
-        uses: falling42/ssh-deploy@v0.1.1
+        uses: falling42/ssh-deploy@v0.1.2
         with:
           use_jump_host: 'yes'
           jump_ssh_host: ${{ secrets.JUMP_SSH_HOST }}
@@ -122,7 +122,7 @@ main:
         #   script: mvn clean -B package -DskipTests
 
         - name: Deploy Application via SSH
-          image: docker.cnb.cool/falling42/ssh-deploy:v0.1.1
+          image: docker.cnb.cool/falling42/ssh-deploy:v0.1.2
           imports: https://cnb.cool/org/repo/-/blob/main/yourenv.yml
           settings:
             ssh_host: ${SSH_HOST}
@@ -143,7 +143,7 @@ main:
 ### ✅ 注意事项
 
 * 请确保 `${SSH_HOST}` 等变量已在 CNB 密钥仓库中配置。
-* `imports` 时确保你已经在密钥仓库文件中配置`allow_images`允许`docker.cnb.cool/falling42/ssh-deploy:v0.1.1`和`allow_slugs`允许你的仓库。
+* `imports` 时确保你已经在密钥仓库文件中配置`allow_images`允许`docker.cnb.cool/falling42/ssh-deploy:v0.1.2`和`allow_slugs`允许你的仓库。
 
 ---
 
