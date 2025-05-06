@@ -8,13 +8,13 @@ $:
             docker-hub:
               imports: https://cnb.cool/falling42/credentials/-/blob/main/docker-hub.yml
               script: | 
-                docker login -u ${FL_USER} -p "${FL_PAT}" ${CNB_DOCKER_REGISTRY}
+                docker login -u ${FL_USER} -p "${FL_PAT}"
                 docker build -f Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH} .
                 docker push ${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH}
             docker-hub-latest:
               imports: https://cnb.cool/falling42/credentials/-/blob/main/docker-hub.yml
               script: |
-                docker login -u ${FL_USER} -p "${FL_PAT}" ${CNB_DOCKER_REGISTRY}
+                docker login -u ${FL_USER} -p "${FL_PAT}"
                 docker build -f Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_REPO_SLUG_LOWERCASE}:latest .
                 docker push ${CNB_REPO_SLUG_LOWERCASE}:latest
             cnb:
