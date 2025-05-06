@@ -97,24 +97,6 @@ END
 }
 
 # 检查 SSH 是否能连接
-# check_ssh_connection() {
-#   local max_retries=5
-#   local retry_delay=10
-#   local attempt=1
-
-#   while (( attempt <= max_retries )); do
-#     if ssh -o ConnectTimeout=30 remote "echo successful > /dev/null"; then
-#       log_success "SSH connection established."
-#       return 0
-#     else
-#       (( attempt++ ))
-#       sleep "$retry_delay"
-#     fi
-#   done
-
-#   log_error "Error: SSH connection failed after ${max_retries} attempts."
-#   exit 1
-# }
 check_ssh_connection() {
   local max_retries=3
   local retry_delay=10
