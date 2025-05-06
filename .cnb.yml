@@ -4,7 +4,7 @@ $:
       - docker
       stages:
         - name: build
-          imports: https://cnb.cool/falling42/credentials/-/blob/main/env.yml
+          imports: https://cnb.cool/falling42/credentials/-/blob/main/docker-hub.yml
           jobs:
             docker-hub:
               - name: docker login
