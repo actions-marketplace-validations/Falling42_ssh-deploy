@@ -109,7 +109,7 @@ check_ssh_connection() {
   local attempt=1
 
   while (( attempt <= max_retries )); do
-    if ssh -q -o ConnectTimeout=10 remote "echo -e ${GRAY}[$(date +%F %T)]${RESET} ${GREEN}SSH connection successful${RESET}" 2>/dev/null; then
+    if ssh -q -o ConnectTimeout=10 remote "echo successful >/dev/null" 2>/dev/null; then
       return 0
     else
       log_warning "Attempt ${attempt}/${max_retries}: SSH connection failed."
