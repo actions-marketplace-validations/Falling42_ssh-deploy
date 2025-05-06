@@ -73,7 +73,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Deploy Application via SSH
-        uses: falling42/ssh-deploy@v0.2.1
+        uses: falling42/ssh-deploy@v0.1.0
         with:
           ssh_host: ${{ secrets.SSH_HOST }}
           ssh_user: ${{ secrets.SSH_USER }}
@@ -88,15 +88,13 @@ jobs:
           deploy_script: '/var/www/scripts/deploy.sh'
           service_name: 'my-app'
           service_version: ${{ steps.meta.outputs.version }}
-```
-
----
+````
 
 ### 🛡️ 使用跳板机
 
 ```yaml
       - name: Deploy with Jump Host
-        uses: falling42/ssh-deploy@v0.2.1
+        uses: falling42/ssh-deploy@v0.1.0
         with:
           use_jump_host: 'yes'
           jump_ssh_host: ${{ secrets.JUMP_SSH_HOST }}
@@ -107,17 +105,59 @@ jobs:
 
 ---
 
+## 🌐 在 云原生构建 (CNB) 中使用
+
+如果你使用 [cnb.cool](https://cnb.cool) 云原生构建平台，也可以在流水线中直接使用本 Action 的镜像进行部署：
+
+### 🧩 示例配置（.cnb.yml）
+
+```yml
+main:
+  push:
+    pipeline:
+      services:
+        - docker
+      stages:
+        # - name: Build Application
+        #   script: mvn clean -B package -DskipTests
+
+        - name: Deploy Application via SSH
+          image: docker.cnb.cool/falling42/ssh-deploy:v0.1.0
+          imports: https://cnb.cool/org/repo/-/blob/main/yourenv.yml
+          settings:
+            ssh_host: ${SSH_HOST}
+            ssh_user: ${SSH_USER}
+            ssh_private_key: ${SSH_PRIVATE_KEY}
+            ssh_port: ${SSH_PORT}
+            transfer_files: 'yes'
+            source_file_path: './build/app.jar'
+            destination_path: '/var/www/app/'
+            execute_remote_script: 'yes'
+            copy_script: 'yes'
+            source_script: 'scripts/deploy.sh'
+            deploy_script: '/var/www/scripts/deploy.sh'
+            service_name: 'my-app'
+            service_version: "${CNB_BRANCH}-${CNB_COMMIT_SHORT}"
+```
+
+### ✅ 注意事项
+
+* 请确保 `${SSH_HOST}` 等变量已在 CNB 密钥仓库中配置。
+* `imports` 时确保你已经在密钥仓库文件中配置`allow_images`允许`docker.cnb.cool/falling42/ssh-deploy:v0.1.0`和`allow_slugs`允许你的仓库。
+
+---
+
 ## 🔐 推荐的 Secrets 配置
 
-| Secret 名称            | 用途                        |
-| ---------------------- | --------------------------- |
-| `SSH_HOST`             | 目标服务器地址              |
-| `SSH_USER`             | 目标服务器用户名            |
-| `SSH_PRIVATE_KEY`      | 目标服务器私钥              |
+| Secret 名称              | 用途               |
+| ---------------------- | ---------------- |
+| `SSH_HOST`             | 目标服务器地址          |
+| `SSH_USER`             | 目标服务器用户名         |
+| `SSH_PRIVATE_KEY`      | 目标服务器私钥          |
 | `SSH_PORT`             | 目标服务器 SSH 端口（可选） |
-| `JUMP_SSH_HOST`        | 跳板机地址（如使用）        |
+| `JUMP_SSH_HOST`        | 跳板机地址（如使用）       |
 | `JUMP_SSH_USER`        | 跳板机用户名（如使用）      |
-| `JUMP_SSH_PRIVATE_KEY` | 跳板机私钥（如使用）        |
+| `JUMP_SSH_PRIVATE_KEY` | 跳板机私钥（如使用）       |
 
 ---
 
