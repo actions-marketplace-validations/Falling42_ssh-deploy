@@ -1,8 +1,9 @@
 name: 'Deploy via SSH'
-description: 'Deploys application using SSH'
+description: 'Deploys application using SSH via Docker'
 branding:
   icon: 'terminal'
   color: 'gray-dark'
+
 inputs:
   use_screen:
     description: 'Whether to use screen to execute command (yes or no)'
@@ -37,15 +38,15 @@ inputs:
   ssh_port:
     description: 'SSH Port (default: 22)'
     required: false
-    default: '22'  
+    default: '22'
   execute_remote_script:
     description: 'Whether to execute the remote script (yes or no)'
     required: false
     default: 'no'
   copy_script:
-    description: 'Whether to copy the soucre script from your repository (yes or no)'
+    description: 'Whether to copy the source script from your repository (yes or no)'
     required: false
-    default: 'no'  
+    default: 'no'
   source_script:
     description: 'Relative path to source script in your repository'
     required: false
@@ -70,37 +71,25 @@ inputs:
     required: false
 
 runs:
-  using: 'composite'
-  steps:
-    - name: Checkout repo
-      uses: actions/checkout@v4
-      with:
-        repository: falling42/ssh-deploy
-        ref: refs/tags/v0.2.1
-        path: external-repo  # 将脚本检出到一个子目录
-
-    - name: Run SSH Deploy Script with environment variables
-      env:
-        PLUGIN_USE_SCREEN: ${{ inputs.use_screen }}
-        PLUGIN_USE_JUMP_HOST: ${{ inputs.use_jump_host }}
-        PLUGIN_JUMP_SSH_HOST: ${{ inputs.jump_ssh_host }}
-        PLUGIN_JUMP_SSH_USER: ${{ inputs.jump_ssh_user }}
-        PLUGIN_JUMP_SSH_PRIVATE_KEY: ${{ inputs.jump_ssh_private_key }}
-        PLUGIN_JUMP_SSH_PORT: ${{ inputs.jump_ssh_port }}
-        PLUGIN_SSH_HOST: ${{ inputs.ssh_host }}
-        PLUGIN_SSH_USER: ${{ inputs.ssh_user }}
-        PLUGIN_SSH_PRIVATE_KEY: ${{ inputs.ssh_private_key }}
-        PLUGIN_SSH_PORT: ${{ inputs.ssh_port }}
-        PLUGIN_COPY_SCRIPT: ${{ inputs.copy_script }}
-        PLUGIN_SOURCE_SCRIPT: ${{ inputs.source_script }}
-        PLUGIN_DEPLOY_SCRIPT: ${{ inputs.deploy_script }}
-        PLUGIN_SERVICE_NAME: ${{ inputs.service_name }}
-        PLUGIN_SERVICE_VERSION: ${{ inputs.service_version }}
-        PLUGIN_EXECUTE_REMOTE_SCRIPT: ${{ inputs.execute_remote_script }}
-        PLUGIN_TRANSFER_FILES: ${{ inputs.transfer_files }}
-        PLUGIN_SOURCE_FILE_PATH: ${{ inputs.source_file_path }}
-        PLUGIN_DESTINATION_PATH: ${{ inputs.destination_path }}
-      run: |
-        chmod +x ./external-repo/scripts/deploy-via-ssh.sh
-        ./external-repo/scripts/deploy-via-ssh.sh
-      shell: bash
+  using: 'docker'
+  image: 'docker://falling42/ssh-deploy'
+  env:
+    PLUGIN_USE_SCREEN: ${{ inputs.use_screen }}
+    PLUGIN_USE_JUMP_HOST: ${{ inputs.use_jump_host }}
+    PLUGIN_JUMP_SSH_HOST: ${{ inputs.jump_ssh_host }}
+    PLUGIN_JUMP_SSH_USER: ${{ inputs.jump_ssh_user }}
+    PLUGIN_JUMP_SSH_PRIVATE_KEY: ${{ inputs.jump_ssh_private_key }}
+    PLUGIN_JUMP_SSH_PORT: ${{ inputs.jump_ssh_port }}
+    PLUGIN_SSH_HOST: ${{ inputs.ssh_host }}
+    PLUGIN_SSH_USER: ${{ inputs.ssh_user }}
+    PLUGIN_SSH_PRIVATE_KEY: ${{ inputs.ssh_private_key }}
+    PLUGIN_SSH_PORT: ${{ inputs.ssh_port }}
+    PLUGIN_COPY_SCRIPT: ${{ inputs.copy_script }}
+    PLUGIN_SOURCE_SCRIPT: ${{ inputs.source_script }}
+    PLUGIN_DEPLOY_SCRIPT: ${{ inputs.deploy_script }}
+    PLUGIN_SERVICE_NAME: ${{ inputs.service_name }}
+    PLUGIN_SERVICE_VERSION: ${{ inputs.service_version }}
+    PLUGIN_EXECUTE_REMOTE_SCRIPT: ${{ inputs.execute_remote_script }}
+    PLUGIN_TRANSFER_FILES: ${{ inputs.transfer_files }}
+    PLUGIN_SOURCE_FILE_PATH: ${{ inputs.source_file_path }}
+    PLUGIN_DESTINATION_PATH: ${{ inputs.destination_path }}

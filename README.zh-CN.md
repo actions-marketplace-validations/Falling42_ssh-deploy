@@ -41,8 +41,8 @@
 | `jump_ssh_private_key`  | 跳板机私钥                           | 条件必需 |        |
 | `jump_ssh_port`         | 跳板机端口                           | ❌        | `22`   |
 | `transfer_files`        | 是否传输文件（`yes/no`）             | ✅        | `yes`  |
-| `source_file_path`      | 本地文件路径                         | ❌        |        |
-| `destination_path`      | 远程目标绝对路径（可省文件名）       | ❌        |        |
+| `source_file_path`      | 本地文件路径                         | ✅        |        |
+| `destination_path`      | 远程目标绝对路径（可省文件名）       | ✅        |        |
 | `execute_remote_script` | 是否执行部署脚本（`yes/no`）         | ❌        | `no`   |
 | `copy_script`           | 是否上传本地脚本（`yes/no`）         | ❌        | `no`   |
 | `source_script`         | 本地脚本路径                         | 条件必需 |        |
@@ -137,7 +137,6 @@ jobs:
 
 * 始终使用 GitHub Secrets 管理敏感信息。
 * 避免将私钥或主机信息硬编码在工作流中。
-* 若有需要，可以对私钥使用 passphrase 并在运行时注入。
 
 ---
 
