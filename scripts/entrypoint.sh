@@ -116,7 +116,7 @@ END
 #   exit 1
 # }
 check_ssh_connection() {
-  local max_retries=5
+  local max_retries=3
   local retry_delay=10
   local attempt=1
   local err_output
