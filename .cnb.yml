@@ -31,7 +31,7 @@ $:
     - docker build -f Dockerfile -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH} --build-arg CNB_BRANCH=${CNB_BRANCH} . 
     - docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH}
 
-main:
+master:
   push:
     pipeline:
       services:
