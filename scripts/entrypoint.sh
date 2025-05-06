@@ -53,7 +53,13 @@ SERVICE_VERSION="${PLUGIN_SERVICE_VERSION:-}"               # 服务版本
 check_param() {
   local param_value=$1
   local param_name=$2
-  [ -z "$param_value" ] && log_error "Error: $param_name is missing."
+  ##[ -z "$param_value" ] && log_error "Error: $param_name is missing."
+    if [ -z "$param_value" ]; then
+    log_error "Error: $param_name is missing."
+    exit 1
+    else
+      log_info "$param_name is set to $param_value."
+    fi
 }
 
 # 初始化 SSH 目录
@@ -97,12 +103,12 @@ END
 
 # 检查 SSH 是否能连接
 check_ssh_connection() {
-  local max_retries=10
-  local retry_delay=300
+  local max_retries=3
+  local retry_delay=10
   local attempt=1
 
   while (( attempt <= max_retries )); do
-    if ssh -o ConnectTimeout=30 remote "echo successful >/dev/null" ; then
+    if ssh -o ConnectTimeout=30 remote "echo successful >/dev/null" 2>/dev/null; then
       log_success "SSH connection established."
       return 0
     else
