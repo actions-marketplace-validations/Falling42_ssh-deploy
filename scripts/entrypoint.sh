@@ -30,8 +30,6 @@ run_with_error_log() {
   local output
   if ! output=$(eval "$1" 2>&1); then
     while IFS= read -r line; do
-      clean_line=$(echo "$line" | sed 's/\x1B\[[0-9;]*[a-zA-Z]//g')
-      [[ -z "${clean_line// }" ]] && continue
       log_error "$line"
     done <<< "$output"
     return 1
