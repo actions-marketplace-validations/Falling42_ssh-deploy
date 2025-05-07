@@ -161,7 +161,7 @@ execute_inscreen() {
   screen_name="${screen_name_prefix:-screen}-${screen_uuid}"
   check_and_install_screen
   run_with_error_log "ssh remote sudo screen -dmS $screen_name"
-  run_with_error_log "ssh remote sudo screen -S $screen_name -X stuff \$'$command && exit\n'"
+  run_with_error_log "ssh remote sudo screen -S $screen_name -X stuff \"\$'$command && exit\n'\""
   log_success "Command dispatched to remote screen session: $screen_name."
 }
 
