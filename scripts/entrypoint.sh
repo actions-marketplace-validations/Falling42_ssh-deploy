@@ -30,12 +30,15 @@ run_with_error_log() {
   local output
   if ! output=$(eval "$1" 2>&1); then
     while IFS= read -r line; do
-      # 去除 ANSI 控制符
-      clean_line=$(echo "$line" | sed 's/\x1B\[[0-9;]*[a-zA-Z]//g')
-      # 跳过空行或 known_hosts 提示
-      [[ -z "${clean_line// }" ]] && continue
+      # 去除 ANSI 控制符和首尾空白字符
+      clean_line=$(echo "$line" | sed -E 's/\x1B\[[0-9;]*[a-zA-Z]//g' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')
+
+      # 跳过完全空的行或 known_hosts 提示
+      [[ -z "$clean_line" ]] && continue
       echo "$clean_line" | grep -q "Permanently added" && continue
-      log_error "$line"
+
+      # 只打印清洗后的日志
+      log_error "$clean_line"
     done <<< "$output"
     return 1
   fi
