@@ -48,12 +48,14 @@ SERVICE_NAME="${PLUGIN_SERVICE_NAME:-}"                     # 服务名称
 SERVICE_VERSION="${PLUGIN_SERVICE_VERSION:-}"               # 服务版本
 
 # -------------------- 工具函数定义 --------------------
-
 # 参数不能为空
 check_param() {
   local param_value=$1
   local param_name=$2
-  [ -z "$param_value" ] && log_error "Error: $param_name is missing."
+  if [ -z "$param_value" ]; then
+    log_error "Error: $param_name is missing."
+    exit 1
+  fi
 }
 
 # 初始化 SSH 目录
@@ -152,24 +154,42 @@ execute_command() {
   log_success "Command executed on remote host."
 }
 
+check_unsafe_path() {
+  local remote_path="$1"
+  local second_level
+  second_level=$(echo "$remote_path" | awk -F/ 'NF>=3 {print "/" $2 "/" $3}')
+
+  case "$second_level" in
+    /data/* | /mnt/* | /home/* | /opt/* | /var/www | /srv/* | /usr/local | /app/* | /workspace/*)
+      ;;
+    *)
+      log_error "❌ Refusing transfer to unsafe path: $second_level"
+      exit 1
+      ;;
+  esac
+}
+
+#设置所有者
+set_owner(){
+  local remote_path="$1"
+  local permissions="${2:-755}"
+  local ssh_user="${SSH_USER:-}"
+  local second_level
+  second_level=$(echo "$remote_path" | awk -F/ 'NF>=3 {print "/" $2 "/" $3}')
+    
+  ssh -q remote "sudo chmod -R ${permissions} ${second_level} && sudo chown -R ${ssh_user}:${ssh_user} ${second_level}" || {
+    log_error "Error: Failed to set permissions for ${remote_path}."; exit 1; 
+  }
+  log_success "Permissions set for ${remote_path}."
+}
+
 # 设置远程文件权限
 set_permissions() {
   local remote_path="$1"
   local permissions="${2:-755}"
   local ssh_user="${SSH_USER:-}"
-  # 解析第 2 级路径（/opt/xxx）
-  local second_level
-  second_level=$(echo "$remote_path" | awk -F/ 'NF>=3 {print "/" $2 "/" $3}')
-  # 白名单校验
-  case "$second_level" in
-    /data/* | /mnt/* | /home/* | /opt/*)
-      ;;
-    *)
-      log_error "❌ Refusing to chown unsafe path: $second_level"
-      exit 1
-      ;;
-  esac
-  ssh -q remote "sudo chmod -R ${permissions} ${remote_path} && sudo chown -R ${ssh_user} ${second_level}" || {
+
+  ssh -q remote "sudo chmod -R ${permissions} ${remote_path} && sudo chown -R ${ssh_user}:${ssh_user} ${remote_path}" || {
     log_error "Error: Failed to set permissions for ${remote_path}."; exit 1; 
   }
   log_success "Permissions set for ${remote_path}."
@@ -182,12 +202,14 @@ transfer_file() {
   local isdir="false"
   local dest_dir
 
+  check_unsafe_path "$DESTINATION_PATH"
+
   [[ -d "$source" ]] && isdir="true"
   [[ "${destination: -1}" == "/" ]] && destination="${destination}$(basename "$source")"
   dest_dir=$(dirname "$destination")
 
   ssh -q remote "[ -d \"${dest_dir}\" ]" || ssh -q remote "sudo mkdir -p \"${dest_dir}\""
-  set_permissions "${dest_dir}"
+  set_owner "${dest_dir}"
 
   if [ "$isdir" == "true" ]; then
     scp -q -r "$source" "remote:$destination" || { log_error "Error: Directory transfer failed."; exit 1; }
