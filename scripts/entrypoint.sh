@@ -202,7 +202,7 @@ transfer_file() {
   local isdir="false"
   local dest_dir
 
-  check_unsafe_path "$DESTINATION_PATH"
+  check_unsafe_path "${destination}"
 
   [[ -d "$source" ]] && isdir="true"
   [[ "${destination: -1}" == "/" ]] && destination="${destination}$(basename "$source")"
@@ -256,6 +256,7 @@ execute_deployment() {
     log_success "Deployment script '${deploy_script}' executed."
   fi
 }
+
 
 # 检查所有关键参数是否存在
 check_required_params(){
