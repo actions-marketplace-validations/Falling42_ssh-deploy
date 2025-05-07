@@ -6,13 +6,13 @@ $:
         - name: build
           jobs:
             docker-hub:
-              imports: https://cnb.cool/falling42/credentials/-/blob/main/env.yml
+              imports: https://cnb.cool/falling42/credentials/-/blob/main/docker-hub.yml
               script: | 
                 docker login -u ${FL_USER} -p "${FL_PAT}"
                 docker build -f Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH} .
                 docker push ${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH}
             docker-hub-latest:
-              imports: https://cnb.cool/falling42/credentials/-/blob/main/env.yml
+              imports: https://cnb.cool/falling42/credentials/-/blob/main/docker-hub.yml
               script: |
                 docker login -u ${FL_USER} -p "${FL_PAT}"
                 docker build -f Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_REPO_SLUG_LOWERCASE}:latest .
@@ -62,13 +62,13 @@ dev:
           image: docker.cnb.cool/falling42/ssh-deploy:dev
           imports: https://cnb.cool/falling42/credentials/-/blob/main/env.yml
           settings:
-            use_screen: 'no' # Defaults to no, omit if not needed
+            use_screen: 'yes' # Defaults to no, omit if not needed
             use_jump_host: 'no' # Defaults to no, omit if not needed
             # jump_ssh_host: ${{ secrets.JUMP_SSH_HOST }}
             # jump_ssh_user: ${{ secrets.JUMP_SSH_USER }}
             # jump_ssh_private_key: ${{ secrets.JUMP_SSH_PRIVATE_KEY }}
             # jump_ssh_port: ${{ secrets.JUMP_SSH_PORT }} # Default is 22, omit if not needed
-            #   ssh_host: ${test_host}
+            # ssh_host: ${test_host}
             ssh_host: ${test_host}
             ssh_user: ${ssh_user}
             ssh_private_key: ${ssh_private_key}
