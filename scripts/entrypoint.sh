@@ -175,7 +175,7 @@ set_owner(){
   local permissions="${2:-755}"
   local ssh_user="${SSH_USER:-}"
   local second_level
-  second_level=$(echo "$remote_path" | awk -F/ 'NF>=3 {print "/" $2 "/" $3}')
+  second_level=$(echo "$remote_path" | awk -F/ 'NF>=3 {print "/" $2 "/" $3} NF==2 {print "/" $2}')
     
   ssh -q remote "sudo chmod -R ${permissions} ${second_level} && sudo chown -R ${ssh_user}:${ssh_user} ${second_level}" || {
     log_error "Error: Failed to set permissions for ${remote_path}."; exit 1; 

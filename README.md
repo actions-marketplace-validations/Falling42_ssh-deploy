@@ -73,7 +73,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Deploy Application via SSH
-        uses: falling42/ssh-deploy@v0.1.10
+        uses: falling42/ssh-deploy@v0.1.0
         with:
           ssh_host: ${{ secrets.SSH_HOST }}
           ssh_user: ${{ secrets.SSH_USER }}
@@ -94,7 +94,7 @@ jobs:
 
 ```yaml
       - name: Deploy with Jump Host
-        uses: falling42/ssh-deploy@v0.1.10
+        uses: falling42/ssh-deploy@v0.1.0
         with:
           use_jump_host: 'yes'
           jump_ssh_host: ${{ secrets.JUMP_SSH_HOST }}
@@ -122,7 +122,7 @@ main:
         #   script: mvn clean -B package -DskipTests
 
         - name: Deploy Application via SSH
-          image: docker.cnb.cool/falling42/ssh-deploy:v0.1.10
+          image: docker.cnb.cool/falling42/ssh-deploy:v0.1.0
           imports: https://cnb.cool/org/repo/-/blob/main/yourenv.yml
           settings:
             ssh_host: ${SSH_HOST}
@@ -143,7 +143,7 @@ main:
 ### ✅ Notes
 
 * Make sure variables like `${SSH_HOST}` are configured in the CNB secrets vault.
-* If using `imports`, you must configure `allow_images` to permit `docker.cnb.cool/falling42/ssh-deploy:v0.1.10` and `allow_slugs` for your repository in the secrets vault.
+* If using `imports`, you must configure `allow_images` to permit `docker.cnb.cool/falling42/ssh-deploy:v0.1.0` and `allow_slugs` for your repository in the secrets vault.
 
 ---
 
