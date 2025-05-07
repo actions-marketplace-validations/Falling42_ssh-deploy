@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 
 # -------------------- 颜色定义：用于美化日志输出 --------------------
-# RED="\033[31m"
-# GREEN="\033[32m"
-# YELLOW="\033[33m"
-# CYAN="\033[36m"
-# RESET="\033[0m"
-# GRAY="\033[90m"
+RED="\033[31m"
+GREEN="\033[32m"
+YELLOW="\033[33m"
+CYAN="\033[36m"
+RESET="\033[0m"
+GRAY="\033[90m"
 
 # -------------------- 日志函数 --------------------
 log_info() {
@@ -30,13 +30,16 @@ run_with_error_log() {
   local output
   if ! output=$(eval "$1" 2>&1); then
     while IFS= read -r line; do
+      # 去除 ANSI 控制符
+      clean_line=$(echo "$line" | sed 's/\x1B\[[0-9;]*[a-zA-Z]//g')
+      # 跳过空行或 known_hosts 提示
+      [[ -z "${clean_line// }" ]] && continue
+      echo "$clean_line" | grep -q "Permanently added" && continue
       log_error "$line"
     done <<< "$output"
     return 1
   fi
 }
-
-
 
 # -------------------- 环境变量读取（CI 平台传入） --------------------
 SCRIPT_VERSION="${VERSION}"
@@ -116,10 +119,9 @@ check_ssh_connection() {
   local max_retries=3
   local retry_delay=10
   local attempt=1
-  local err_output
 
   while (( attempt <= max_retries )); do
-    run_with_error_log "ssh -q -o ConnectTimeout=30 remote \"echo successful > /dev/null\" 2>&1"
+    run_with_error_log "ssh -o ConnectTimeout=30 remote \"echo successful > /dev/null\" 2>&1"
     if [ $? -eq 0 ]; then
       log_success "SSH connection established."
       return 0
