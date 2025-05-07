@@ -62,7 +62,7 @@ dev:
           image: docker.cnb.cool/falling42/ssh-deploy:dev
           imports: https://cnb.cool/falling42/credentials/-/blob/main/env.yml
           settings:
-            use_screen: 'yes' # Defaults to no, omit if not needed
+            use_screen: 'no' # Defaults to no, omit if not needed
             use_jump_host: 'no' # Defaults to no, omit if not needed
             # jump_ssh_host: ${{ secrets.JUMP_SSH_HOST }}
             # jump_ssh_user: ${{ secrets.JUMP_SSH_USER }}
