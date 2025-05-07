@@ -25,6 +25,17 @@ log_error() {
   echo -e "${GRAY}[$(date '+%F %T')]${RESET} ${RED}$1${RESET}"
 }
 
+# -------------------- 捕获并格式化错误输出 --------------------
+run_with_error_log() {
+  local output
+  if ! output=$(eval "$1" 2>&1); then
+    while IFS= read -r line; do
+      log_error "$line"
+    done <<< "$output"
+    return 1
+  fi
+}
+
 # -------------------- 环境变量读取（CI 平台传入） --------------------
 SCRIPT_VERSION="${VERSION}"
 USE_SCREEN="${PLUGIN_USE_SCREEN:-no}"                       # 是否使用 screen 执行远程命令
@@ -106,12 +117,12 @@ check_ssh_connection() {
   local err_output
 
   while (( attempt <= max_retries )); do
-    err_output=$(ssh -o ConnectTimeout=30 remote "echo successful > /dev/null" 2>&1)
+    run_with_error_log "ssh -q -o ConnectTimeout=30 remote \"echo successful > /dev/null\" 2>&1"
     if [ $? -eq 0 ]; then
       log_success "SSH connection established."
       return 0
     else
-      log_warning "SSH connection attempt $attempt failed: $err_output"
+      log_warning "SSH connection attempt $attempt failed."
       (( attempt++ ))
       sleep "$retry_delay"
     fi
@@ -123,12 +134,12 @@ check_ssh_connection() {
 
 # 如果远程没有安装 screen，则尝试自动安装
 check_and_install_screen() {
-  ssh -q remote "command -v screen &>/dev/null" || {
-    ssh -q remote "if command -v apt-get &>/dev/null; then sudo apt-get update && sudo apt-get install -y screen; \
-      elif command -v yum &>/dev/null; then sudo yum install -y screen; \
-      elif command -v dnf &>/dev/null; then sudo dnf install -y screen; \
-      elif command -v pacman &>/dev/null; then sudo pacman -Sy screen; \
-      else echo 'Error: No supported package manager.'; exit 1; fi" || {
+run_with_error_log "ssh -q remote 'command -v screen &>/dev/null'" || {
+  run_with_error_log "ssh -q remote \"if command -v apt-get &>/dev/null; then sudo apt-get update && sudo apt-get install -y screen; \
+    elif command -v yum &>/dev/null; then sudo yum install -y screen; \
+    elif command -v dnf &>/dev/null; then sudo dnf install -y screen; \
+    elif command -v pacman &>/dev/null; then sudo pacman -Sy screen; \
+    else echo 'Error: No supported package manager.'; exit 1; fi\""} || {
         log_error "Error: Failed to install 'screen'."; exit 1; 
       }
   }
@@ -142,15 +153,15 @@ execute_inscreen() {
   screen_uuid="$(uuidgen)"
   screen_name="${screen_name_prefix:-screen}-${screen_uuid}"
   check_and_install_screen
-  ssh -q remote sudo screen -dmS $screen_name
-  ssh -q remote sudo screen -S $screen_name -X stuff "\$'$command && exit\n'"
+  run_with_error_log "ssh -q remote sudo screen -dmS $screen_name"
+  run_with_error_log "ssh -q remote sudo screen -S $screen_name -X stuff \$'$command && exit\n'"
   log_success "Command dispatched to remote screen session."
 }
 
 # 直接 SSH 执行命令
 execute_command() {
   local command="$1"
-  ssh -q remote "$command" || { log_error "Error: Failed to execute command."; exit 1; }
+  run_with_error_log "ssh -q remote \"$command\"" || { log_error "Error: Failed to execute command."; exit 1; }
   log_success "Command executed on remote host."
 }
 
@@ -177,7 +188,7 @@ set_owner(){
   local second_level
   second_level=$(echo "$remote_path" | awk -F/ 'NF>=3 {print "/" $2 "/" $3} NF==2 {print "/" $2}')
     
-  ssh -q remote "sudo chmod -R ${permissions} ${second_level} && sudo chown -R ${ssh_user}:${ssh_user} ${second_level}" || {
+  run_with_error_log "ssh -q remote \"sudo chmod -R ${permissions} ${second_level} && sudo chown -R ${ssh_user}:${ssh_user} ${second_level}\"" || {
     log_error "Error: Failed to set permissions for ${remote_path}."; exit 1; 
   }
   log_success "Permissions set for ${remote_path}."
@@ -189,7 +200,7 @@ set_permissions() {
   local permissions="${2:-755}"
   local ssh_user="${SSH_USER:-}"
 
-  ssh -q remote "sudo chmod -R ${permissions} ${remote_path} && sudo chown -R ${ssh_user}:${ssh_user} ${remote_path}" || {
+  run_with_error_log "ssh -q remote \"sudo chmod -R ${permissions} ${remote_path} && sudo chown -R ${ssh_user}:${ssh_user} ${remote_path}\"" || {
     log_error "Error: Failed to set permissions for ${remote_path}."; exit 1; 
   }
   log_success "Permissions set for ${remote_path}."
@@ -208,11 +219,11 @@ transfer_file() {
   [[ "${destination: -1}" == "/" ]] && destination="${destination}$(basename "$source")"
   dest_dir=$(dirname "$destination")
 
-  ssh -q remote "[ -d \"${dest_dir}\" ]" || ssh -q remote "sudo mkdir -p \"${dest_dir}\""
+  run_with_error_log "ssh -q remote \"[ -d '${dest_dir}' ]\" || ssh -q remote \"sudo mkdir -p '${dest_dir}'\""
   set_owner "${dest_dir}"
 
   if [ "$isdir" == "true" ]; then
-    scp -q -r "$source" "remote:$destination" || { log_error "Error: Directory transfer failed."; exit 1; }
+    run_with_error_log "scp -q -r \"$source\" \"remote:$destination\"" || { log_error "Error: Directory transfer failed."; exit 1; }
     log_success "Directory '$source' transferred to '$destination'."
   else
     local source_md5 remote_md5
@@ -221,7 +232,7 @@ transfer_file() {
     if [ "$source_md5" == "$remote_md5" ]; then
       log_success "Remote file already up-to-date. Skipping transfer."
     else
-      scp -q "$source" "remote:$destination" || { log_error "Error: File transfer failed."; exit 1; }
+      run_with_error_log "scp -q \"$source\" \"remote:$destination\"" || { log_error "Error: File transfer failed."; exit 1; }
       log_success "File '$source' transferred to '$destination'."
     fi
   fi
@@ -306,7 +317,7 @@ check_execute_deployment(){
       check_param "$SOURCE_SCRIPT" "Source script"
       transfer_file "$SOURCE_SCRIPT" "$DEPLOY_SCRIPT"
     else
-      ssh -q remote [ -f "${DEPLOY_SCRIPT}" ] && set_permissions "$DEPLOY_SCRIPT" || {
+      run_with_error_log "ssh -q remote [ -f \"${DEPLOY_SCRIPT}\" ]" && set_permissions "$DEPLOY_SCRIPT" || {
         log_error "Error: Remote script does not exist: ${DEPLOY_SCRIPT}"; exit 1
       }
     fi
