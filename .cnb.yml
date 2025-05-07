@@ -70,7 +70,7 @@ dev:
             # jump_ssh_port: ${{ secrets.JUMP_SSH_PORT }} # Default is 22, omit if not needed
             # ssh_host: ${test_host}
             ssh_host: ${test_host}
-            ssh_user: ${ssh_user}
+            ssh_user: xxxx
             ssh_private_key: ${ssh_private_key}
             # ssh_port: ${{ secrets.SSH_PORT }} # Default is 22, omit if not needed
             transfer_files: 'yes' # Defaults to yes, as transferring files is a core function of this action :)
