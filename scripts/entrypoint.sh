@@ -257,7 +257,6 @@ execute_deployment() {
   fi
 }
 
-
 # 检查所有关键参数是否存在
 check_required_params(){
   check_param "$USE_SCREEN" "Use screen"
