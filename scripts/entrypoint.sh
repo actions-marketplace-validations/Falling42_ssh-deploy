@@ -162,13 +162,13 @@ execute_inscreen() {
   check_and_install_screen
   run_with_error_log "ssh remote sudo screen -dmS $screen_name"
   run_with_error_log "ssh remote sudo screen -S $screen_name -X stuff \$'$command && exit\n'"
-  log_success "Command dispatched to remote screen session."
+  log_success "Command dispatched to remote screen session: $screen_name."
 }
 
 # 直接 SSH 执行命令
 execute_command() {
   local command="$1"
-  run_with_error_log "ssh remote \"$command\"" || { log_error "Error: Failed to execute command."; exit 1; }
+  ssh remote "${command}" || { log_error "Error: Failed to execute command."; exit 1; }
   log_success "Command executed on remote host."
 }
 
