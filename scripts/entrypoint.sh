@@ -141,16 +141,18 @@ check_ssh_connection() {
 
 # 如果远程没有安装 screen，则尝试自动安装
 check_and_install_screen() {
-run_with_error_log "ssh remote 'command -v screen &>/dev/null'" || {
-  run_with_error_log "ssh remote \"if command -v apt-get &>/dev/null; then sudo apt-get update && sudo apt-get install -y screen; \
-    elif command -v yum &>/dev/null; then sudo yum install -y screen; \
-    elif command -v dnf &>/dev/null; then sudo dnf install -y screen; \
-    elif command -v pacman &>/dev/null; then sudo pacman -Sy screen; \
-    else echo 'Error: No supported package manager.'; exit 1; fi\""} || {
-        log_error "Error: Failed to install 'screen'."; exit 1; 
-      }
-  }
+    run_with_error_log "ssh remote 'command -v screen &>/dev/null'" || {
+        run_with_error_log "ssh remote 'bash -c \"if command -v apt-get &>/dev/null; then sudo apt-get update && sudo apt-get install -y screen; \
+elif command -v yum &>/dev/null; then sudo yum install -y screen; \
+elif command -v dnf &>/dev/null; then sudo dnf install -y screen; \
+elif command -v pacman &>/dev/null; then sudo pacman -Sy screen; \
+else echo Error: No supported package manager.; exit 1; fi\"'" || {
+            log_error "Error: Failed to install 'screen'."
+            exit 1
+        }
+    }
 }
+
 
 # 在 screen 中执行命令，支持断线后继续运行
 execute_inscreen() {
