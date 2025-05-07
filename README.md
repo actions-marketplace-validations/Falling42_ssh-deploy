@@ -1,78 +1,70 @@
-# 🚀 Deploy via SSH · GitHub Action
+# 🚀 Deploy via SSH · Universal Remote Deployment Tool
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+[简体中文](README.zh-CN.md) | [English](README.md)
 
-**Deploy via SSH** is a simple and efficient GitHub Action that enables remote deployment via SSH. It supports file transfer, script execution, and even jump host connections, making it suitable for various deployment scenarios.
+**Deploy via SSH** is a cross-platform deployment utility for pushing build artifacts and executing deployment scripts via SSH. It supports jump hosts, `screen` for background tasks, and works seamlessly with GitHub Actions, CNB Cloud Native pipelines, GitLab CI, Jenkins, and more.
 
 ---
 
 ## ✨ Features
 
-* 🔒 **SSH Connections**: Securely connect to target servers, even through a jump host.
-* 📦 **File Transfer**: Use `scp` to upload artifacts from your repository to a remote server.
-* 🛠️ **Script Execution**: Run deployment scripts on the remote server to automate deployment.
-* 🖥️ **Screen Support**: Optional `screen` mode keeps tasks running even after disconnection.
-* ⚙️ **Highly Configurable**: Configure each step flexibly via input parameters.
+- 🔒 **Secure SSH Connection**: Direct or via jump host.
+- 📦 **File Transfer**: Upload files or directories via `scp`.
+- 🛠️ **Script Execution**: Run deployment scripts remotely to restart services, update configs, etc.
+- 🖥️ **Screen Support**: Run tasks in `screen` to ensure they persist even after CI disconnects.
+- ⚙️ **Highly Configurable**: Configure all behavior via parameters or environment variables.
 
 ---
 
-## ✅ Prerequisites
+## ✅ Requirements
 
-Before using this Action, make sure:
-
-* The GitHub Runner can access the target server via SSH (optionally via a jump host).
-* SSH key-based authentication is set up on the remote server.
-* `screen` is installed on the target server if you plan to use it.
-* All necessary credentials are stored in GitHub Secrets.
+- Target server must support SSH key authentication.
+- CI runner must be able to access the target host (or jump host if used).
+- If using `screen`, ensure it is installed on the server.
+- Secrets or environment variables should be configured for credentials and sensitive data.
 
 ---
 
 ## 🔧 Input Parameters
 
-| Name                   | Description                                 | Required | Default |
-|------------------------|---------------------------------------------|----------|---------|
-| `ssh_host`             | SSH address of the target server            | ✅       |         |
-| `ssh_user`             | SSH username                                | ✅       |         |
-| `ssh_private_key`      | SSH private key (PEM format)                | ✅       |         |
-| `ssh_port`             | SSH port                                    | ❌       | `22`    |
-| `use_jump_host`        | Use a jump host (`yes/no`)                  | ❌       | `no`    |
-| `jump_ssh_host`        | Jump host address                           | Conditionally required | |
-| `jump_ssh_user`        | Jump host username                          | Conditionally required | |
-| `jump_ssh_private_key` | Jump host private key                       | Conditionally required | |
-| `jump_ssh_port`        | Jump host port                              | ❌       | `22`    |
-| `transfer_files`       | Whether to transfer files (`yes/no`)        | ✅       | `yes`   |
-| `source_file_path`     | Local file path                             | ✅       |         |
-| `destination_path`     | Absolute path on remote server              | ✅       |         |
-| `execute_remote_script`| Whether to execute a remote script (`yes/no`)| ❌      | `no`    |
-| `copy_script`          | Whether to upload the local script (`yes/no`)| ❌      | `no`    |
-| `source_script`        | Local script path                           | Conditionally required | |
-| `deploy_script`        | Full absolute path of the script on server  | Conditionally required | |
-| `use_screen`           | Use `screen` to persist task (`yes/no`)     | ❌       | `no`    |
-| `service_name`         | Service name (passed to the script)         | ❌       |         |
-| `service_version`      | Service version (passed to the script)      | ❌       |         |
+| Name                    | Description                                               | Required | Default |
+|-------------------------|-----------------------------------------------------------|----------|---------|
+| `ssh_host`              | Target server hostname or IP                              | ✅        |         |
+| `ssh_user`              | SSH username                                              | ✅        |         |
+| `ssh_private_key`       | SSH private key (PEM format, plaintext or Base64)         | ✅        |         |
+| `ssh_port`              | SSH port                                                  | ❌        | `22`    |
+| `use_jump_host`         | Whether to use a jump host (`yes` or `no`)                | ❌        | `no`    |
+| `jump_ssh_host`         | Jump host address                                         | Cond.    |         |
+| `jump_ssh_user`         | Jump host SSH username                                    | Cond.    |         |
+| `jump_ssh_private_key`  | Jump host private key                                     | Cond.    |         |
+| `jump_ssh_port`         | Jump host SSH port                                        | ❌        | `22`    |
+| `transfer_files`        | Transfer local files to server (`yes` or `no`)            | ✅        | `yes`   |
+| `source_file_path`      | Local path to file or directory                           | ✅        |         |
+| `destination_path`      | Destination absolute path on remote (trailing `/` = copy) | ✅        |         |
+| `execute_remote_script` | Execute a remote script (`yes` or `no`)                   | ❌        | `no`    |
+| `copy_script`           | Upload local script before execution (`yes` or `no`)      | ❌        | `no`    |
+| `source_script`         | Path to local script                                      | Cond.    |         |
+| `deploy_script`         | Absolute path to script on remote                         | Cond.    |         |
+| `use_screen`            | Use `screen` to run commands                              | ❌        | `no`    |
+| `service_name`          | Optional service name (passed to script)                  | ❌        |         |
+| `service_version`       | Optional service version (passed to script)               | ❌        |         |
 
 > ℹ️ Note: If `destination_path` ends with `/`, the entire source directory will be copied into that directory.
 
 ---
 
-## 📦 Example Workflow
+## 📦 Usage Examples
 
-### 🚀 Basic Deployment (with file transfer and script execution)
+### ✅ GitHub Actions
 
 ```yaml
-name: Deploy to Server
-
-on:
-  push:
-    branches: [ main ]
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
-      - name: Deploy Application via SSH
+      - name: Deploy via SSH
         uses: falling42/ssh-deploy@v0.1.0
         with:
           ssh_host: ${{ secrets.SSH_HOST }}
@@ -88,39 +80,17 @@ jobs:
           deploy_script: '/var/www/scripts/deploy.sh'
           service_name: 'my-app'
           service_version: ${{ steps.meta.outputs.version }}
-````
-
-### 🛡️ With Jump Host
-
-```yaml
-      - name: Deploy with Jump Host
-        uses: falling42/ssh-deploy@v0.1.0
-        with:
-          use_jump_host: 'yes'
-          jump_ssh_host: ${{ secrets.JUMP_SSH_HOST }}
-          jump_ssh_user: ${{ secrets.JUMP_SSH_USER }}
-          jump_ssh_private_key: ${{ secrets.JUMP_SSH_PRIVATE_KEY }}
-          # other parameters remain the same...
 ```
 
----
+### 🧩 CNB Cloud Native Build Pipeline
 
-## 🌐 Using with CloudNative Build (CNB)
-
-If you are using [cnb.cool](https://cnb.cool) cloud-native build platform, you can also directly use the deployment image in your pipeline:
-
-### 🧩 Sample Configuration (`.cnb.yml`)
-
-```yml
+```yaml
 main:
   push:
     pipeline:
       services:
         - docker
       stages:
-        # - name: Build Application
-        #   script: mvn clean -B package -DskipTests
-
         - name: Deploy Application via SSH
           image: docker.cnb.cool/falling42/ssh-deploy:v0.1.0
           imports: https://cnb.cool/org/repo/-/blob/main/yourenv.yml
@@ -140,55 +110,36 @@ main:
             service_version: "${CNB_BRANCH}-${CNB_COMMIT_SHORT}"
 ```
 
-### ✅ Notes
-
-* Make sure variables like `${SSH_HOST}` are configured in the CNB secrets vault.
-* If using `imports`, you must configure `allow_images` to permit `docker.cnb.cool/falling42/ssh-deploy:v0.1.0` and `allow_slugs` for your repository in the secrets vault.
+> ✅ Ensure the container image is allowed and secrets are properly configured.
 
 ---
 
-## 🔐 Recommended Secrets
-
-| Secret Name            | Purpose                       |
-| ---------------------- | ----------------------------- |
-| `SSH_HOST`             | Target server address         |
-| `SSH_USER`             | SSH username on the server    |
-| `SSH_PRIVATE_KEY`      | SSH private key               |
-| `SSH_PORT`             | SSH port (optional)           |
-| `JUMP_SSH_HOST`        | Jump host address (optional)  |
-| `JUMP_SSH_USER`        | Jump host username (optional) |
-| `JUMP_SSH_PRIVATE_KEY` | Jump host private key         |
-
----
-
-## 🧯 Error Handling
-
-This Action will automatically fail if:
-
-* Required parameters are missing
-* SSH/SCP command fails
-* Script execution fails
-
-Check the Action logs for detailed messages.
-
----
-
-## 🔒 Safety Mechanism
-
-To prevent accidental deployment to sensitive or dangerous directories on the remote server, this Action includes an internal path validation function: `check_unsafe_path`. It automatically verifies the safety of the `destination_path` before any file transfer is performed.
-
-### 🛡️ Validation Logic
-
-When `transfer_files: yes` is set, the function extracts the second-level path from the specified `destination_path`. For example:
+### 🐳 Generic Docker Run (CI/CD Agnostic)
 
 ```bash
-# If destination_path="/root/secret/app/"
-# Extracted path: /root/secret
-# If destination_path="/root"
-# Extracted path: /root
+docker run --rm \
+  -e PLUGIN_SSH_HOST=your.remote.host \
+  -e PLUGIN_SSH_USER=root \
+  -e PLUGIN_SSH_PRIVATE_KEY="$(cat ~/.ssh/id_rsa)" \
+  -e PLUGIN_TRANSFER_FILES=yes \
+  -e PLUGIN_SOURCE_FILE_PATH=/workspace/build/app.jar \
+  -e PLUGIN_DESTINATION_PATH=/opt/apps/my-app/ \
+  -e PLUGIN_EXECUTE_REMOTE_SCRIPT=yes \
+  -e PLUGIN_COPY_SCRIPT=yes \
+  -e PLUGIN_SOURCE_SCRIPT=/workspace/scripts/deploy.sh \
+  -e PLUGIN_DEPLOY_SCRIPT=/opt/apps/my-app/deploy.sh \
+  -e PLUGIN_SERVICE_NAME=my-app \
+  -e PLUGIN_SERVICE_VERSION=1.0.0 \
+  -v $(pwd):/workspace \
+  falling42/ssh-deploy:v0.1.0
+
 ```
 
-Then, it checks this against a whitelist of allowed safe locations:
+---
+
+## 🛡️ Path Safety Checks
+
+To avoid accidental overwrites or privilege escalation, the tool restricts deployment paths using a whitelist:
 
 ```bash
 /data/*       
@@ -197,34 +148,33 @@ Then, it checks this against a whitelist of allowed safe locations:
 /opt/*        
 /var/www      
 /srv/*        
-/ usr/local    
-/app/*        
-/ workspace/*
+/worker/*     
+/usr/local    
+/app/*
 ```
 
-If the path does not match any of the allowed patterns, the deployment is aborted and a message like the following will appear:
+If a target path violates the rule, deployment will halt:
 
 ```bash
 ❌ Refusing transfer to unsafe path: /root/secret
 ```
 
-### ✅ Best Practices
-
-Always choose safe and designated directories for deployment, such as `/var/www/my-app/` or `/data/apps/your-app/`, and avoid targeting sensitive system locations.
-
-This safety check is enabled by default and requires no additional configuration. It is designed to help protect your remote server from deployment mistakes.
-
 ---
 
-## 🔐 Security Recommendations
+## 🔐 Recommended Secrets
 
-* Always use GitHub Secrets to store sensitive credentials.
-* Avoid hardcoding private keys or server details in the workflow file.
+| Secret Name             | Purpose             |
+|-------------------------|---------------------|
+| `SSH_HOST`              | Remote server host  |
+| `SSH_USER`              | SSH username        |
+| `SSH_PRIVATE_KEY`       | SSH private key     |
+| `SSH_PORT`              | Optional SSH port   |
+| `JUMP_SSH_HOST`         | Optional jump host  |
+| `JUMP_SSH_USER`         | Optional jump user  |
+| `JUMP_SSH_PRIVATE_KEY`  | Optional jump key   |
 
 ---
 
 ## 🧾 License
 
 Apache 2.0 License © [falling42](https://github.com/falling42)
-
----

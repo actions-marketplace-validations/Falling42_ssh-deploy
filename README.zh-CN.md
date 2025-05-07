@@ -1,78 +1,70 @@
-# 🚀 Deploy via SSH · GitHub Action
+# 🚀 Deploy via SSH · 通用远程部署工具
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-**Deploy via SSH** 是一个简单高效的 GitHub Action，用于通过 SSH 实现远程部署，支持文件传输、脚本执行，甚至跳板机连接，适合各种部署场景。
+**Deploy via SSH** 是一个跨平台部署工具，可通过 SSH 实现构建产物的传输与远程脚本执行，适配 GitHub Actions、CNB 云原生平台、GitLab CI、Jenkins 等多种场景，支持跳板机连接、screen 后台任务等功能。
 
 ---
 
 ## ✨ 功能特色
 
-* 🔒 **SSH 连接**：支持通过跳板机安全连接目标主机。
-* 📦 **文件传输**：使用 `scp` 将构建产物从仓库传输至远程服务器。
-* 🛠️ **脚本执行**：在远程服务器运行部署脚本，完成自动化部署。
-* 🖥️ **Screen 支持**：可选 `screen` 模式，部署任务不中断。
-* ⚙️ **高可配置性**：通过输入参数灵活配置每一个步骤。
+- 🔒 **SSH 安全连接**：支持直连与跳板机方式访问服务器。
+- 📦 **构建产物传输**：通过 `scp` 上传文件/目录到远程主机。
+- 🛠️ **远程脚本执行**：自动运行部署脚本，实现服务发布或重启等操作。
+- 🖥️ **Screen 支持**：可在 `screen` 中运行部署命令，保持后台执行不中断。
+- ⚙️ **可配置参数**：支持环境变量、YAML 配置等多种方式配置部署逻辑。
 
 ---
 
-## ✅ 使用前提
+## ✅ 使用条件
 
-在使用此 Action 之前，请确保：
-
-* GitHub Runner 能够通过 SSH 访问目标服务器（可选跳板机）。
-* 远程服务器已配置 SSH 公钥认证。
-* `screen`（可选）已在目标服务器中安装。
-* GitHub Secrets 中已配置必要的凭据信息。
+- 目标服务器已配置 SSH 公钥认证；
+- CI 环境可访问目标服务器（如有跳板机则需中转）；
+- 如使用 `screen` 功能，请确保远程服务器已安装；
+- 所有密钥、主机信息建议通过 Secret 或环境变量传入。
 
 ---
 
-## 🔧 输入参数一览
+## 🔧 参数说明
 
-| 名称                    | 描述                                 | 是否必需 | 默认值 |
-| ----------------------- | ------------------------------------ | -------- | ------ |
-| `ssh_host`              | 目标服务器 SSH 地址                  | ✅        |        |
-| `ssh_user`              | SSH 用户名                           | ✅        |        |
-| `ssh_private_key`       | SSH 私钥（PEM 格式）                 | ✅        |        |
-| `ssh_port`              | SSH 端口                             | ❌        | `22`   |
-| `use_jump_host`         | 是否使用跳板机（`yes/no`）           | ❌        | `no`   |
-| `jump_ssh_host`         | 跳板机地址                           | 条件必需 |        |
-| `jump_ssh_user`         | 跳板机用户名                         | 条件必需 |        |
-| `jump_ssh_private_key`  | 跳板机私钥                           | 条件必需 |        |
-| `jump_ssh_port`         | 跳板机端口                           | ❌        | `22`   |
-| `transfer_files`        | 是否传输文件（`yes/no`）             | ✅        | `yes`  |
-| `source_file_path`      | 本地文件路径                         | ✅        |        |
-| `destination_path`      | 远程目标绝对路径（可省文件名）       | ✅        |        |
-| `execute_remote_script` | 是否执行部署脚本（`yes/no`）         | ❌        | `no`   |
-| `copy_script`           | 是否上传本地脚本（`yes/no`）         | ❌        | `no`   |
-| `source_script`         | 本地脚本路径                         | 条件必需 |        |
-| `deploy_script`         | 远程脚本完整绝对路径                 | 条件必需 |        |
-| `use_screen`            | 是否使用 screen 保持任务（`yes/no`） | ❌        | `no`   |
-| `service_name`          | 服务名称（传给脚本）                 | ❌        |        |
-| `service_version`       | 服务版本（传给脚本）                 | ❌        |        |
+| 参数名                    | 描述                                         | 是否必需 | 默认值   |
+|-------------------------|--------------------------------------------|---------|--------|
+| `ssh_host`              | 目标服务器地址                                 | ✅       |        |
+| `ssh_user`              | SSH 登录用户名                                 | ✅       |        |
+| `ssh_private_key`       | SSH 私钥（PEM 格式，Base64 或纯文本）           | ✅       |        |
+| `ssh_port`              | SSH 端口                                      | ❌       | `22`   |
+| `use_jump_host`         | 是否使用跳板机（`yes/no`）                    | ❌       | `no`   |
+| `jump_ssh_host`         | 跳板机地址                                     | 条件必需 |        |
+| `jump_ssh_user`         | 跳板机用户名                                   | 条件必需 |        |
+| `jump_ssh_private_key`  | 跳板机私钥                                     | 条件必需 |        |
+| `jump_ssh_port`         | 跳板机端口                                     | ❌       | `22`   |
+| `transfer_files`        | 是否传输构建产物（`yes/no`）                  | ✅       | `yes`  |
+| `source_file_path`      | 本地构建文件或目录路径                          | ✅       |        |
+| `destination_path`      | 远程目标路径（以 `/` 结尾则整体复制目录）       | ✅       |        |
+| `execute_remote_script` | 是否执行远程脚本（`yes/no`）                  | ❌       | `no`   |
+| `copy_script`           | 是否上传本地脚本（`yes/no`）                   | ❌       | `no`   |
+| `source_script`         | 本地脚本路径（若启用上传）                     | 条件必需 |        |
+| `deploy_script`         | 远程脚本完整路径（将被执行）                   | 条件必需 |        |
+| `use_screen`            | 是否在 screen 中执行部署命令                   | ❌       | `no`   |
+| `service_name`          | 服务名（将传入部署脚本）                       | ❌       |        |
+| `service_version`       | 服务版本（将传入部署脚本）                     | ❌       |        |
 
 > ℹ️ 注意：`destination_path` 如果以 `/` 结尾，则源目录会完整复制进该目录。
 
 ---
 
-## 📦 示例工作流
+## 📦 多平台使用方式
 
-### 🚀 基础部署（含文件传输和脚本执行）
+### ✅ GitHub Actions 示例
 
 ```yaml
-name: Deploy to Server
-
-on:
-  push:
-    branches: [ main ]
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
-      - name: Deploy Application via SSH
+      - name: Deploy via SSH
         uses: falling42/ssh-deploy@v0.1.0
         with:
           ssh_host: ${{ secrets.SSH_HOST }}
@@ -88,39 +80,19 @@ jobs:
           deploy_script: '/var/www/scripts/deploy.sh'
           service_name: 'my-app'
           service_version: ${{ steps.meta.outputs.version }}
-````
-
-### 🛡️ 使用跳板机
-
-```yaml
-      - name: Deploy with Jump Host
-        uses: falling42/ssh-deploy@v0.1.0
-        with:
-          use_jump_host: 'yes'
-          jump_ssh_host: ${{ secrets.JUMP_SSH_HOST }}
-          jump_ssh_user: ${{ secrets.JUMP_SSH_USER }}
-          jump_ssh_private_key: ${{ secrets.JUMP_SSH_PRIVATE_KEY }}
-          # 其他参数与上面类似...
 ```
 
----
+### 🧩 CNB 云原生构建平台
 
-## 🌐 在 云原生构建 (CNB) 中使用
+#### 示例 `.cnb.yml` 配置
 
-如果你使用 [cnb.cool](https://cnb.cool) 云原生构建平台，也可以在流水线中直接使用本 Action 的镜像进行部署：
-
-### 🧩 示例配置（.cnb.yml）
-
-```yml
+```yaml
 main:
   push:
     pipeline:
       services:
         - docker
       stages:
-        # - name: Build Application
-        #   script: mvn clean -B package -DskipTests
-
         - name: Deploy Application via SSH
           image: docker.cnb.cool/falling42/ssh-deploy:v0.1.0
           imports: https://cnb.cool/org/repo/-/blob/main/yourenv.yml
@@ -140,55 +112,36 @@ main:
             service_version: "${CNB_BRANCH}-${CNB_COMMIT_SHORT}"
 ```
 
-### ✅ 注意事项
-
-* 请确保 `${SSH_HOST}` 等变量已在 CNB 密钥仓库中配置。
-* `imports` 时确保你已经在密钥仓库文件中配置`allow_images`允许`docker.cnb.cool/falling42/ssh-deploy:v0.1.0`和`allow_slugs`允许你的仓库。
+> ✅ 确保 `imports` 中允许该镜像，并在密钥仓库配置相应变量。
 
 ---
 
-## 🔐 推荐的 Secrets 配置
-
-| Secret 名称              | 用途               |
-| ---------------------- | ---------------- |
-| `SSH_HOST`             | 目标服务器地址          |
-| `SSH_USER`             | 目标服务器用户名         |
-| `SSH_PRIVATE_KEY`      | 目标服务器私钥          |
-| `SSH_PORT`             | 目标服务器 SSH 端口（可选） |
-| `JUMP_SSH_HOST`        | 跳板机地址（如使用）       |
-| `JUMP_SSH_USER`        | 跳板机用户名（如使用）      |
-| `JUMP_SSH_PRIVATE_KEY` | 跳板机私钥（如使用）       |
-
----
-
-## 🧯 错误处理
-
-本 Action 遇到以下任一问题将自动失败：
-
-* 缺失必填参数
-* SSH/SCP 命令失败
-* 脚本执行失败
-
-请在 Action 日志中查看详细信息。
-
----
-
-## 🔒 安全机制
-
-为防止误操作将构建产物传输到远程服务器的敏感或危险目录，本 Action 内部新增了路径校验函数 `check_unsafe_path`，在执行传输前自动校验 `destination_path` 是否为安全路径。
-
-### 🛡️ 校验逻辑
-
-在文件传输（`transfer_files: yes`）时，系统会自动从 `destination_path` 提取出前两级路径进行校验，例如：
+### 🐳 通用 Docker 方式
 
 ```bash
-# 假设 destination_path="/root/secret/app/"
-# 提取结果：/root/secret
-# 假设 destination_path="/root"
-# 提取结果：/root
+docker run --rm \
+  -e PLUGIN_SSH_HOST=your.remote.host \
+  -e PLUGIN_SSH_USER=root \
+  -e PLUGIN_SSH_PRIVATE_KEY="$(cat ~/.ssh/id_rsa)" \
+  -e PLUGIN_TRANSFER_FILES=yes \
+  -e PLUGIN_SOURCE_FILE_PATH=/workspace/build/app.jar \
+  -e PLUGIN_DESTINATION_PATH=/opt/apps/my-app/ \
+  -e PLUGIN_EXECUTE_REMOTE_SCRIPT=yes \
+  -e PLUGIN_COPY_SCRIPT=yes \
+  -e PLUGIN_SOURCE_SCRIPT=/workspace/scripts/deploy.sh \
+  -e PLUGIN_DEPLOY_SCRIPT=/opt/apps/my-app/deploy.sh \
+  -e PLUGIN_SERVICE_NAME=my-app \
+  -e PLUGIN_SERVICE_VERSION=1.0.0 \
+  -v $(pwd):/workspace \
+  falling42/ssh-deploy:v0.1.0
+
 ```
 
-然后将该结果与以下「允许路径」进行匹配：
+---
+
+## 🛡️ 安全机制与路径校验
+
+为避免误部署至敏感目录，默认启用路径白名单校验，仅允许以下前缀：
 
 ```bash
 /data/*       
@@ -199,32 +152,31 @@ main:
 /srv/*        
 /usr/local    
 /app/*        
-/ workspace/*
+/worker/*
 ```
 
-若路径不符合上述白名单规则，部署任务将被中止，并输出类似以下错误：
+如目标路径不安全，部署将被拒绝：
 
 ```bash
 ❌ Refusing transfer to unsafe path: /root/secret
 ```
 
-### ✅ 使用建议
-
-请将部署路径限定在受信的业务目录中，如 `/var/www/my-app/`、`/data/apps/xxx/` 等，避免将文件误传至系统根目录或其他敏感路径。
-
-该机制默认启用，无需额外配置，旨在保护您的远程服务器安全。
-
 ---
 
-## 🔐 安全建议
+## 🔐 推荐 Secret 列表
 
-* 始终使用 GitHub Secrets 管理敏感信息。
-* 避免将私钥或主机信息硬编码在工作流中。
+| Secret 名称              | 用途               |
+|--------------------------|--------------------|
+| `SSH_HOST`               | 目标服务器地址       |
+| `SSH_USER`               | 登录用户名           |
+| `SSH_PRIVATE_KEY`        | SSH 私钥            |
+| `SSH_PORT`               | SSH 端口（可选）     |
+| `JUMP_SSH_HOST`          | 跳板机地址（可选）   |
+| `JUMP_SSH_USER`          | 跳板机用户名（可选） |
+| `JUMP_SSH_PRIVATE_KEY`   | 跳板机私钥（可选）   |
 
 ---
 
 ## 🧾 License
 
 Apache 2.0 License © [falling42](https://github.com/falling42)
-
----
