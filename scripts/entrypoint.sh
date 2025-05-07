@@ -119,7 +119,7 @@ check_ssh_connection() {
   local err_output
 
   while (( attempt <= max_retries )); do
-    run_with_error_log "ssh -o ConnectTimeout=30 remote \"echo successful > /dev/null\" 2>&1"
+    run_with_error_log "ssh -q -o ConnectTimeout=30 remote \"echo successful > /dev/null\" 2>&1"
     if [ $? -eq 0 ]; then
       log_success "SSH connection established."
       return 0
