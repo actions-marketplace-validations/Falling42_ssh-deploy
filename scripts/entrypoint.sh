@@ -202,7 +202,7 @@ transfer_file() {
   local isdir="false"
   local dest_dir
 
-  check_unsafe_path "$DESTINATION_PATH"
+  check_unsafe_path "${destination}"
 
   [[ -d "$source" ]] && isdir="true"
   [[ "${destination: -1}" == "/" ]] && destination="${destination}$(basename "$source")"
