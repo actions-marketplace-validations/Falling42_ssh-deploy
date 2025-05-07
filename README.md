@@ -173,6 +173,49 @@ Check the Action logs for detailed messages.
 
 ---
 
+## 🔒 Safety Mechanism
+
+To prevent accidental deployment to sensitive or dangerous directories on the remote server, this Action includes an internal path validation function: `check_unsafe_path`. It automatically verifies the safety of the `destination_path` before any file transfer is performed.
+
+### 🛡️ Validation Logic
+
+When `transfer_files: yes` is set, the function extracts the second-level path from the specified `destination_path`. For example:
+
+```bash
+# If destination_path="/root/secret/app/"
+# Extracted path: /root/secret
+# If destination_path="/root"
+# Extracted path: /root
+```
+
+Then, it checks this against a whitelist of allowed safe locations:
+
+```bash
+/data/*       
+/mnt/*        
+/home/*       
+/opt/*        
+/var/www      
+/srv/*        
+/ usr/local    
+/app/*        
+/ workspace/*
+```
+
+If the path does not match any of the allowed patterns, the deployment is aborted and a message like the following will appear:
+
+```bash
+❌ Refusing transfer to unsafe path: /root/secret
+```
+
+### ✅ Best Practices
+
+Always choose safe and designated directories for deployment, such as `/var/www/my-app/` or `/data/apps/your-app/`, and avoid targeting sensitive system locations.
+
+This safety check is enabled by default and requires no additional configuration. It is designed to help protect your remote server from deployment mistakes.
+
+---
+
 ## 🔐 Security Recommendations
 
 * Always use GitHub Secrets to store sensitive credentials.

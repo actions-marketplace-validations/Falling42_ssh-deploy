@@ -173,6 +173,49 @@ main:
 
 ---
 
+## 🔒 安全机制
+
+为防止误操作将构建产物传输到远程服务器的敏感或危险目录，本 Action 内部新增了路径校验函数 `check_unsafe_path`，在执行传输前自动校验 `destination_path` 是否为安全路径。
+
+### 🛡️ 校验逻辑
+
+在文件传输（`transfer_files: yes`）时，系统会自动从 `destination_path` 提取出前两级路径进行校验，例如：
+
+```bash
+# 假设 destination_path="/root/secret/app/"
+# 提取结果：/root/secret
+# 假设 destination_path="/root"
+# 提取结果：/root
+```
+
+然后将该结果与以下「允许路径」进行匹配：
+
+```bash
+/data/*       
+/mnt/*        
+/home/*       
+/opt/*        
+/var/www      
+/srv/*        
+/usr/local    
+/app/*        
+/ workspace/*
+```
+
+若路径不符合上述白名单规则，部署任务将被中止，并输出类似以下错误：
+
+```bash
+❌ Refusing transfer to unsafe path: /root/secret
+```
+
+### ✅ 使用建议
+
+请将部署路径限定在受信的业务目录中，如 `/var/www/my-app/`、`/data/apps/xxx/` 等，避免将文件误传至系统根目录或其他敏感路径。
+
+该机制默认启用，无需额外配置，旨在保护您的远程服务器安全。
+
+---
+
 ## 🔐 安全建议
 
 * 始终使用 GitHub Secrets 管理敏感信息。
