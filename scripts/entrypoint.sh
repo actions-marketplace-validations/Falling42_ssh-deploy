@@ -30,13 +30,16 @@ run_with_error_log() {
   local output
   if ! output=$(eval "$1" 2>&1); then
     while IFS= read -r line; do
-      # 跳过空行或纯空白行
-      [[ -z "${line// }" ]] && continue
+      # 去除 ANSI 转义序列
+      clean_line=$(echo "$line" | sed 's/\x1B\[[0-9;]*[a-zA-Z]//g')
+      # 若内容为空（即只剩颜色代码），跳过
+      [[ -z "${clean_line// }" ]] && continue
       log_error "$line"
     done <<< "$output"
     return 1
   fi
 }
+
 
 
 # -------------------- 环境变量读取（CI 平台传入） --------------------
