@@ -30,11 +30,14 @@ run_with_error_log() {
   local output
   if ! output=$(eval "$1" 2>&1); then
     while IFS= read -r line; do
+      # 跳过空行或纯空白行
+      [[ -z "${line// }" ]] && continue
       log_error "$line"
     done <<< "$output"
     return 1
   fi
 }
+
 
 # -------------------- 环境变量读取（CI 平台传入） --------------------
 SCRIPT_VERSION="${VERSION}"
@@ -134,8 +137,8 @@ check_ssh_connection() {
 
 # 如果远程没有安装 screen，则尝试自动安装
 check_and_install_screen() {
-run_with_error_log "ssh -q remote 'command -v screen &>/dev/null'" || {
-  run_with_error_log "ssh -q remote \"if command -v apt-get &>/dev/null; then sudo apt-get update && sudo apt-get install -y screen; \
+run_with_error_log "ssh remote 'command -v screen &>/dev/null'" || {
+  run_with_error_log "ssh remote \"if command -v apt-get &>/dev/null; then sudo apt-get update && sudo apt-get install -y screen; \
     elif command -v yum &>/dev/null; then sudo yum install -y screen; \
     elif command -v dnf &>/dev/null; then sudo dnf install -y screen; \
     elif command -v pacman &>/dev/null; then sudo pacman -Sy screen; \
@@ -153,15 +156,15 @@ execute_inscreen() {
   screen_uuid="$(uuidgen)"
   screen_name="${screen_name_prefix:-screen}-${screen_uuid}"
   check_and_install_screen
-  run_with_error_log "ssh -q remote sudo screen -dmS $screen_name"
-  run_with_error_log "ssh -q remote sudo screen -S $screen_name -X stuff \$'$command && exit\n'"
+  run_with_error_log "ssh remote sudo screen -dmS $screen_name"
+  run_with_error_log "ssh remote sudo screen -S $screen_name -X stuff \$'$command && exit\n'"
   log_success "Command dispatched to remote screen session."
 }
 
 # 直接 SSH 执行命令
 execute_command() {
   local command="$1"
-  run_with_error_log "ssh -q remote \"$command\"" || { log_error "Error: Failed to execute command."; exit 1; }
+  run_with_error_log "ssh remote \"$command\"" || { log_error "Error: Failed to execute command."; exit 1; }
   log_success "Command executed on remote host."
 }
 
@@ -188,7 +191,7 @@ set_owner(){
   local second_level
   second_level=$(echo "$remote_path" | awk -F/ 'NF>=3 {print "/" $2 "/" $3} NF==2 {print "/" $2}')
     
-  run_with_error_log "ssh -q remote \"sudo chmod -R ${permissions} ${second_level} && sudo chown -R ${ssh_user}:${ssh_user} ${second_level}\"" || {
+  run_with_error_log "ssh remote \"sudo chmod -R ${permissions} ${second_level} && sudo chown -R ${ssh_user}:${ssh_user} ${second_level}\"" || {
     log_error "Error: Failed to set permissions for ${remote_path}."; exit 1; 
   }
   log_success "Permissions set for ${remote_path}."
@@ -200,7 +203,7 @@ set_permissions() {
   local permissions="${2:-755}"
   local ssh_user="${SSH_USER:-}"
 
-  run_with_error_log "ssh -q remote \"sudo chmod -R ${permissions} ${remote_path} && sudo chown -R ${ssh_user}:${ssh_user} ${remote_path}\"" || {
+  run_with_error_log "ssh remote \"sudo chmod -R ${permissions} ${remote_path} && sudo chown -R ${ssh_user}:${ssh_user} ${remote_path}\"" || {
     log_error "Error: Failed to set permissions for ${remote_path}."; exit 1; 
   }
   log_success "Permissions set for ${remote_path}."
@@ -219,20 +222,20 @@ transfer_file() {
   [[ "${destination: -1}" == "/" ]] && destination="${destination}$(basename "$source")"
   dest_dir=$(dirname "$destination")
 
-  run_with_error_log "ssh -q remote \"[ -d '${dest_dir}' ]\" || ssh -q remote \"sudo mkdir -p '${dest_dir}'\""
+  run_with_error_log "ssh remote \"[ -d '${dest_dir}' ]\" || ssh remote \"sudo mkdir -p '${dest_dir}'\""
   set_owner "${dest_dir}"
 
   if [ "$isdir" == "true" ]; then
-    run_with_error_log "scp -q -r \"$source\" \"remote:$destination\"" || { log_error "Error: Directory transfer failed."; exit 1; }
+    run_with_error_log "scp -r \"$source\" \"remote:$destination\"" || { log_error "Error: Directory transfer failed."; exit 1; }
     log_success "Directory '$source' transferred to '$destination'."
   else
     local source_md5 remote_md5
     source_md5=$(md5sum "$source" | awk '{print $1}')
-    remote_md5=$(ssh -q remote "md5sum \"$destination\" 2>/dev/null" | awk '{print $1}')
+    remote_md5=$(ssh remote "md5sum \"$destination\" 2>/dev/null" | awk '{print $1}')
     if [ "$source_md5" == "$remote_md5" ]; then
       log_success "Remote file already up-to-date. Skipping transfer."
     else
-      run_with_error_log "scp -q \"$source\" \"remote:$destination\"" || { log_error "Error: File transfer failed."; exit 1; }
+      run_with_error_log "scp \"$source\" \"remote:$destination\"" || { log_error "Error: File transfer failed."; exit 1; }
       log_success "File '$source' transferred to '$destination'."
     fi
   fi
@@ -317,7 +320,7 @@ check_execute_deployment(){
       check_param "$SOURCE_SCRIPT" "Source script"
       transfer_file "$SOURCE_SCRIPT" "$DEPLOY_SCRIPT"
     else
-      run_with_error_log "ssh -q remote [ -f \"${DEPLOY_SCRIPT}\" ]" && set_permissions "$DEPLOY_SCRIPT" || {
+      run_with_error_log "ssh remote [ -f \"${DEPLOY_SCRIPT}\" ]" && set_permissions "$DEPLOY_SCRIPT" || {
         log_error "Error: Remote script does not exist: ${DEPLOY_SCRIPT}"; exit 1
       }
     fi
