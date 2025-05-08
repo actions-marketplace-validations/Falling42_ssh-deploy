@@ -116,7 +116,7 @@ main:
 
 ---
 
-### 🐳 通用 Docker 方式
+### 🐳 通用 Docker 方式 (其他 CI/CD 平台)
 
 ```bash
 docker run --rm \
@@ -152,7 +152,7 @@ docker run --rm \
 /srv/*        
 /usr/local    
 /app/*        
-/worker/*
+/workspace/*
 ```
 
 如目标路径不安全，部署将被拒绝：

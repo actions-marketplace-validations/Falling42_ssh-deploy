@@ -114,7 +114,7 @@ main:
 
 ---
 
-### 🐳 Generic Docker Run (CI/CD Agnostic)
+### 🐳 Generic Docker Run Example (Other CI/CD platform)
 
 ```bash
 docker run --rm \
@@ -148,7 +148,7 @@ To avoid accidental overwrites or privilege escalation, the tool restricts deplo
 /opt/*        
 /var/www      
 /srv/*        
-/worker/*     
+/workspace/*     
 /usr/local    
 /app/*
 ```
