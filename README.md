@@ -1,8 +1,8 @@
-# 🚀 Deploy via SSH · Universal Remote Deployment Tool
+# 🚀 Deploy via SSH · Remote Deployment Tool
 
 [简体中文](README.zh-CN.md) | [English](README.md)
 
-**Deploy via SSH** is a cross-platform deployment utility for pushing build artifacts and executing deployment scripts via SSH. It supports jump hosts, `screen` for background tasks, and works seamlessly with GitHub Actions, CNB Cloud Native pipelines, GitLab CI, Jenkins, and more.
+**Deploy via SSH** is a deployment utility for pushing build artifacts and executing deployment scripts via SSH. It supports jump hosts, `screen` for background tasks, and works seamlessly with GitHub Actions, CNB Cloud Native pipelines, GitLab CI, Jenkins, and more.
 
 ---
 
@@ -21,35 +21,36 @@
 - Target server must support SSH key authentication.
 - CI runner must be able to access the target host (or jump host if used).
 - If using `screen`, ensure it is installed on the server.
+- The script uses `sudo`, so please ensure that the regular user has sudo privileges and that passwordless sudo has been configured.
 - Secrets or environment variables should be configured for credentials and sensitive data.
 
 ---
 
 ## 🔧 Input Parameters
 
-| Name                    | Description                                               | Required | Default |
-|-------------------------|-----------------------------------------------------------|----------|---------|
-| `ssh_host`              | Target server hostname or IP                              | ✅        |         |
-| `ssh_user`              | SSH username                                              | ✅        |         |
-| `ssh_private_key`       | SSH private key (PEM format, plaintext or Base64)         | ✅        |         |
-| `ssh_port`              | SSH port                                                  | ❌        | `22`    |
-| `use_jump_host`         | Whether to use a jump host (`yes` or `no`)                | ❌        | `no`    |
-| `jump_ssh_host`         | Jump host address                                         | Cond.    |         |
-| `jump_ssh_user`         | Jump host SSH username                                    | Cond.    |         |
-| `jump_ssh_private_key`  | Jump host private key                                     | Cond.    |         |
-| `jump_ssh_port`         | Jump host SSH port                                        | ❌        | `22`    |
-| `transfer_files`        | Transfer local files to server (`yes` or `no`)            | ✅        | `yes`   |
-| `source_file_path`      | Local path to file or directory                           | ✅        |         |
-| `destination_path`      | Destination absolute path on remote (trailing `/` = copy) | ✅        |         |
-| `execute_remote_script` | Execute a remote script (`yes` or `no`)                   | ❌        | `no`    |
-| `copy_script`           | Upload local script before execution (`yes` or `no`)      | ❌        | `no`    |
-| `source_script`         | Path to local script                                      | Cond.    |         |
-| `deploy_script`         | Absolute path to script on remote                         | Cond.    |         |
-| `use_screen`            | Use `screen` to run commands                              | ❌        | `no`    |
-| `service_name`          | Optional service name (passed to script)                  | ❌        |         |
-| `service_version`       | Optional service version (passed to script)               | ❌        |         |
+| Name                    | Description                                          | Required | Default |
+| ----------------------- | ---------------------------------------------------- | -------- | ------- |
+| `ssh_host`              | Target server hostname or IP                         | ✅        |         |
+| `ssh_user`              | SSH username                                         | ✅        |         |
+| `ssh_private_key`       | SSH private key                                      | ✅        |         |
+| `ssh_port`              | SSH port                                             | ❌        | `22`    |
+| `use_jump_host`         | Whether to use a jump host (`yes` or `no`)           | ❌        | `no`    |
+| `jump_ssh_host`         | Jump host address                                    | Cond.    |         |
+| `jump_ssh_user`         | Jump host SSH username                               | Cond.    |         |
+| `jump_ssh_private_key`  | Jump host private key                                | Cond.    |         |
+| `jump_ssh_port`         | Jump host SSH port                                   | ❌        | `22`    |
+| `transfer_files`        | Transfer local files to server (`yes` or `no`)       | ✅        | `yes`   |
+| `source_file_path`      | Local path to file or directory                      | ✅        |         |
+| `destination_path`      | Destination absolute path on remote                  | ✅        |         |
+| `execute_remote_script` | Execute a remote script (`yes` or `no`)              | ❌        | `no`    |
+| `copy_script`           | Upload local script before execution (`yes` or `no`) | ❌        | `no`    |
+| `source_script`         | Path to local script                                 | Cond.    |         |
+| `deploy_script`         | Absolute path to script on remote                    | Cond.    |         |
+| `use_screen`            | Use `screen` to run commands                         | ❌        | `no`    |
+| `service_name`          | Optional service name (passed to script)             | ❌        |         |
+| `service_version`       | Optional service version (passed to script)          | ❌        |         |
 
-> ℹ️ Note: If `destination_path` ends with `/`, the entire source directory will be copied into that directory.
+> **ℹ️ Note: If `destination_path` ends with `/`, the entire source directory will be copied into that directory.**
 
 ---
 
@@ -84,6 +85,8 @@ jobs:
 
 ### 🧩 CNB Cloud Native Build Pipeline
 
+#### Example `.cnb.yml`
+
 ```yaml
 main:
   push:
@@ -110,7 +113,22 @@ main:
             service_version: "${CNB_BRANCH}-${CNB_COMMIT_SHORT}"
 ```
 
-> ✅ Ensure the container image is allowed and secrets are properly configured.
+> **ℹ️  Ensure the container image is allowed and secrets are properly configured.**
+
+#### Example private key configuration in `env.yml`
+
+> **ℹ️ Note: The entire private key must be properly indented (aligned).**
+
+```yaml
+ssh_private_key: |
+  -----BEGIN OPENSSH PRIVATE KEY-----
+  abcdefghijklmnopqrstuvwxyz1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh
+  ijklmnopqrstuvwxyz1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnop
+  qrstuvwxyz1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwx
+  yz1234567890ABCDEFGHIJKLMNOPQRSTUVWXYabcdefgh+ijklmnopqrstuvwxyz123456
+  7890ABCDEFGHIJKLMNOPQRSTUV+WXYZabcdefghijklmnopqrstuvw==
+  -----END OPENSSH PRIVATE KEY-----
+```
 
 ---
 
@@ -163,15 +181,16 @@ If a target path violates the rule, deployment will halt:
 
 ## 🔐 Recommended Secrets
 
-| Secret Name             | Purpose             |
-|-------------------------|---------------------|
-| `SSH_HOST`              | Remote server host  |
-| `SSH_USER`              | SSH username        |
-| `SSH_PRIVATE_KEY`       | SSH private key     |
-| `SSH_PORT`              | Optional SSH port   |
-| `JUMP_SSH_HOST`         | Optional jump host  |
-| `JUMP_SSH_USER`         | Optional jump user  |
-| `JUMP_SSH_PRIVATE_KEY`  | Optional jump key   |
+| Secret Name             | Purpose                  |
+|-------------------------|--------------------------|
+| `SSH_HOST`              | Remote server host       |
+| `SSH_USER`              | SSH username             |
+| `SSH_PRIVATE_KEY`       | SSH private key          |
+| `SSH_PORT`              | Optional SSH port        |
+| `JUMP_SSH_HOST`         | Optional jump host       |
+| `JUMP_SSH_USER`         | Optional jump user       |
+| `JUMP_SSH_PRIVATE_KEY`  | Optional jump key        |
+| `JUMP_SSH_PORT`         | Optional jump SSH port   |
 
 ---
 
