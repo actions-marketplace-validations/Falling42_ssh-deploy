@@ -1,8 +1,8 @@
-# 🚀 Deploy via SSH · 通用远程部署工具
+# 🚀 Deploy via SSH · 远程部署工具
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-**Deploy via SSH** 是一个跨平台部署工具，可通过 SSH 实现构建产物的传输与远程脚本执行，适配 GitHub Actions、CNB 云原生平台、GitLab CI、Jenkins 等多种场景，支持跳板机连接、screen 后台任务等功能。
+**Deploy via SSH** 是一个部署工具，可通过 SSH 实现构建产物的传输与远程脚本执行，适配 GitHub Actions、CNB 云原生平台、GitLab CI、Jenkins 等多种场景，支持跳板机连接、screen 后台任务等功能。
 
 ---
 
@@ -19,8 +19,9 @@
 ## ✅ 使用条件
 
 - 目标服务器已配置 SSH 公钥认证；
-- CI 环境可访问目标服务器（如有跳板机则需中转）；
+- CI 环境可访问目标服务器（可通过跳板机中转）；
 - 如使用 `screen` 功能，请确保远程服务器已安装；
+- 脚本使用`sudo`, 请确保普通用户具有sudo权限并且已经配置免密；
 - 所有密钥、主机信息建议通过 Secret 或环境变量传入。
 
 ---
@@ -31,7 +32,7 @@
 |-------------------------|--------------------------------------------|---------|--------|
 | `ssh_host`              | 目标服务器地址                                 | ✅       |        |
 | `ssh_user`              | SSH 登录用户名                                 | ✅       |        |
-| `ssh_private_key`       | SSH 私钥（PEM 格式，Base64 或纯文本）           | ✅       |        |
+| `ssh_private_key`       | SSH 私钥           | ✅       |        |
 | `ssh_port`              | SSH 端口                                      | ❌       | `22`   |
 | `use_jump_host`         | 是否使用跳板机（`yes/no`）                    | ❌       | `no`   |
 | `jump_ssh_host`         | 跳板机地址                                     | 条件必需 |        |
@@ -40,7 +41,7 @@
 | `jump_ssh_port`         | 跳板机端口                                     | ❌       | `22`   |
 | `transfer_files`        | 是否传输构建产物（`yes/no`）                  | ✅       | `yes`  |
 | `source_file_path`      | 本地构建文件或目录路径                          | ✅       |        |
-| `destination_path`      | 远程目标路径（以 `/` 结尾则整体复制目录）       | ✅       |        |
+| `destination_path`      | 远程目标路径       | ✅       |        |
 | `execute_remote_script` | 是否执行远程脚本（`yes/no`）                  | ❌       | `no`   |
 | `copy_script`           | 是否上传本地脚本（`yes/no`）                   | ❌       | `no`   |
 | `source_script`         | 本地脚本路径（若启用上传）                     | 条件必需 |        |
@@ -49,42 +50,15 @@
 | `service_name`          | 服务名（将传入部署脚本）                       | ❌       |        |
 | `service_version`       | 服务版本（将传入部署脚本）                     | ❌       |        |
 
-> ℹ️ 注意：`destination_path` 如果以 `/` 结尾，则源目录会完整复制进该目录。
+> **ℹ️ 注意：`destination_path` 如果以 `/` 结尾，则源目录会完整复制进该目录。**
 
 ---
 
 ## 📦 多平台使用方式
 
-### ✅ GitHub Actions 示例
-
-```yaml
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Deploy via SSH
-        uses: falling42/ssh-deploy@v0.1.0
-        with:
-          ssh_host: ${{ secrets.SSH_HOST }}
-          ssh_user: ${{ secrets.SSH_USER }}
-          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
-          ssh_port: 23456
-          transfer_files: 'yes'
-          source_file_path: './build/app.jar'
-          destination_path: '/var/www/app/'
-          execute_remote_script: 'yes'
-          copy_script: 'yes'
-          source_script: 'scripts/deploy.sh'
-          deploy_script: '/var/www/scripts/deploy.sh'
-          service_name: 'my-app'
-          service_version: ${{ steps.meta.outputs.version }}
-```
-
 ### 🧩 CNB 云原生构建平台
 
-#### 示例 `.cnb.yml` 配置
+#### 示例 `.cnb.yml`
 
 ```yaml
 main:
@@ -112,7 +86,49 @@ main:
             service_version: "${CNB_BRANCH}-${CNB_COMMIT_SHORT}"
 ```
 
-> ✅ 确保 `imports` 中允许该镜像，并在密钥仓库配置相应变量。
+> **ℹ️  确保 `imports` 中允许该镜像，并在密钥仓库配置相应变量。**
+
+#### 示例私钥配置 `env.yml`
+
+> **ℹ️ 注意私钥整体要对齐**
+
+```yaml
+ssh_private_key: |
+  -----BEGIN OPENSSH PRIVATE KEY-----
+  abcdefghijklmnopqrstuvwxyz1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh
+  ijklmnopqrstuvwxyz1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnop
+  qrstuvwxyz1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwx
+  yz1234567890ABCDEFGHIJKLMNOPQRSTUVWXYabcdefgh+ijklmnopqrstuvwxyz123456
+  7890ABCDEFGHIJKLMNOPQRSTUV+WXYZabcdefghijklmnopqrstuvw==
+  -----END OPENSSH PRIVATE KEY-----
+```
+
+### ✅ GitHub Actions 示例
+
+```yaml
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Deploy via SSH
+        uses: falling42/ssh-deploy@v0.1.0
+        with:
+          ssh_host: ${{ secrets.SSH_HOST }}
+          ssh_user: ${{ secrets.SSH_USER }}
+          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ssh_port: 23456
+          transfer_files: 'yes'
+          source_file_path: './build/app.jar'
+          destination_path: '/var/www/app/'
+          execute_remote_script: 'yes'
+          copy_script: 'yes'
+          source_script: 'scripts/deploy.sh'
+          deploy_script: '/var/www/scripts/deploy.sh'
+          service_name: 'my-app'
+          service_version: ${{ steps.meta.outputs.version }}
+```
 
 ---
 
@@ -174,6 +190,7 @@ docker run --rm \
 | `JUMP_SSH_HOST`          | 跳板机地址（可选）   |
 | `JUMP_SSH_USER`          | 跳板机用户名（可选） |
 | `JUMP_SSH_PRIVATE_KEY`   | 跳板机私钥（可选）   |
+| `JUMP_SSH_PORT` | 跳板机SSH 端口（可选） |
 
 ---
 
