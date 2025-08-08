@@ -31,12 +31,12 @@ $:
               imports: https://cnb.cool/falling42/credentials/-/blob/main/docker-hub.yml
               script: | 
                 docker login -u ${FL_USER} -p "${FL_PAT}"
-                docker build -f windows.Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_REPO_SLUG_LOWERCASE}:windows .
-                docker push ${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH}
+                docker build -f windows.Dockerfile --build-arg CNB_BRANCH=windows -t ${CNB_REPO_SLUG_LOWERCASE}:windows .
+                docker push ${CNB_REPO_SLUG_LOWERCASE}:windows
             cnb:
               script: |
-                docker build -f windows.Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:windows .
-                docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH}
+                docker build -f windows.Dockerfile --build-arg CNB_BRANCH=windows -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:windows .
+                docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:windows
 
 
 .build_dev: &build_dev
