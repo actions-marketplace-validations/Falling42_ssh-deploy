@@ -31,22 +31,13 @@ $:
               imports: https://cnb.cool/falling42/credentials/-/blob/main/docker-hub.yml
               script: | 
                 docker login -u ${FL_USER} -p "${FL_PAT}"
-                docker build -f windows.Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH} .
+                docker build -f windows.Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH}-windows .
                 docker push ${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH}
-            docker-hub-latest:
-              imports: https://cnb.cool/falling42/credentials/-/blob/main/docker-hub.yml
-              script: |
-                docker login -u ${FL_USER} -p "${FL_PAT}"
-                docker build -f windows.Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_REPO_SLUG_LOWERCASE}:latest .
-                docker push ${CNB_REPO_SLUG_LOWERCASE}:latest
             cnb:
               script: |
-                docker build -f windows.Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH} .
+                docker build -f windows.Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH}-windows .
                 docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_BRANCH}
-            cnb-latest:            
-              script: |
-                docker build -f windows.Dockerfile --build-arg CNB_BRANCH=${CNB_BRANCH} -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest .
-                docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest
+
 
 .build_dev: &build_dev
   script:
